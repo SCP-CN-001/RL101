@@ -20,11 +20,6 @@ class AgentBase(ABC):
         """Update the network's parameters.
         """
 
-    @abstractmethod
-    def evaluate(self):
-        """Evaluate current policy
-        """
-
     def save_checkpoint(self, checkpoint_dir: str):
         """Store the model structure and corresponding parameters to a file.
         """

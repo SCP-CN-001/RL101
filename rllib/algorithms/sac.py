@@ -110,7 +110,7 @@ class SACConfig(ConfigBase):
         ## hyper-parameters
         self.gamma: float = 0.99
         self.batch_size: int = 128
-        self.tau: float = 1e-2          # soft-update factor
+        self.tau: float = 5e-3          # soft-update factor
         self.buffer_size: int = int(1e6)
 
         ## actor net
@@ -147,7 +147,7 @@ class SACConfig(ConfigBase):
 
 class SAC(AgentBase):
     """Soft Actor-Critic (SAC)
-    Implementing based on the 2nd version of SAC paper 'Soft Actor-Critic Algorithms and Applications'
+    An implementation of SAC based on the 2nd version of SAC paper 'Soft Actor-Critic Algorithms and Applications'
     """
     def __init__(self, configs: dict):
         super().__init__(SACConfig, configs)
@@ -174,7 +174,7 @@ class SAC(AgentBase):
         )
         self.log_alpha_optimizer = torch.optim.Adam([self.log_alpha], self.configs.lr_alpha)
         
-         # the replay buffer
+        # the replay buffer
         self.buffer = ReplayBuffer(self.configs.buffer_size)
 
     @property
@@ -203,7 +203,7 @@ class SAC(AgentBase):
         next_state = torch.FloatTensor(batches["next_state"]).to(device)
         done = torch.FloatTensor(batches["done"]).unsqueeze(-1).to(device)
 
-        # Soft Q loss
+        # soft Q loss
         next_action, next_log_prob = self.policy_net.evaluate(next_state)
         q1_target = self.q1_target_net(next_state, next_action)
         q2_target = self.q2_target_net(next_state, next_action)
@@ -214,7 +214,7 @@ class SAC(AgentBase):
         q1_loss = F.mse_loss(current_q1, q_target.detach())
         q2_loss = F.mse_loss(current_q2, q_target.detach())
 
-        # Update the critic networks
+        # update the critic networks
         self.q1_optimizer.zero_grad()
         q1_loss.backward()
         self.q1_optimizer.step()
@@ -222,28 +222,24 @@ class SAC(AgentBase):
         q2_loss.backward()
         self.q2_optimizer.step()
 
-        # Policy loss
+        # policy loss
         action_, log_prob = self.policy_net.evaluate(state)
         q1_value = self.q1_net(state, action_)
         q2_value = self.q2_net(state, action_)
         policy_loss = (self.alpha.detach() * log_prob - torch.min(q1_value, q2_value)).mean()
 
-        # Update the actor network
+        # update the actor network
         self.policy_optimizer.zero_grad()
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        # Optimize alpha
+        # optimize alpha
         if self.configs.learn_temperature:
             alpha_loss = (self.alpha * (-log_prob - self.configs.target_entropy).detach()).mean()
             self.log_alpha_optimizer.zero_grad()
             alpha_loss.backward()
             self.log_alpha_optimizer.step()
 
-
-        # Soft update target networks
+        # soft update target networks
         self.soft_update(self.q1_target_net, self.q1_net)
         self.soft_update(self.q2_target_net, self.q2_net)
-
-    def evaluate(self):
-        return super().evaluate()

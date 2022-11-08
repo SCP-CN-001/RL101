@@ -5,39 +5,48 @@ import os
 import time
 
 import numpy as np
+from PIL import Image
 import gym
 from torch.utils.tensorboard import SummaryWriter
 
-from rllib.algorithms.sac import SAC
+from rllib.algorithms.dqn import DQN
 
 
 np.random.seed(20)
 
 
-def train(
-    env: gym.Env, agent: SAC, num_episode: int, time_step: int, update_freq: int,
+def process_atari(state):
+    im = Image.fromarray(state, mode="RGB")
+    im = im.resize((84, 84))
+    gray = im.convert('L')
+    im_array = np.array(im)
+    gray_array = np.expand_dims(np.array(gray), axis=2)
+    processed_state = np.concatenate((im_array, gray_array), axis=2)
+    processed_state = np.transpose(processed_state, (2, 0, 1))
+    return processed_state
+
+
+def train_atari(
+    env: gym.Env, agent:DQN, num_episode: int, time_step: int, update_freq: int,
     writer: SummaryWriter
 ):
 
-    action_range = [env.action_space.low, env.action_space.high]
+    total_steps = 0
     cnt_step = 0
 
     for episode in range(num_episode):
         score = 0
         state = env.reset()
         for i in range(time_step):
-            env.render()
-            action = agent.get_action(state)
-            # action output range[-1,1],expand to allowable range
-            action_in =  action * (action_range[1] - action_range[0]) / 2.0 +  (action_range[1] + action_range[0]) / 2.0
-
-            next_state, reward, done, _ = env.step(action_in)
+            processed_state = process_atari(state)
+            action = agent.get_action(processed_state, total_steps)
+            next_state, reward, done, _ = env.step(action)
             done_mask = 0.0 if done else 1.0
             agent.buffer.push((state, action, reward, done_mask))
 
             state = next_state
             score += reward
-            cnt_step += 1
+            total_steps += 1
             if done:
                 break
             if cnt_step > update_freq:
@@ -47,7 +56,7 @@ def train(
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
         writer.add_scalar("score", score, episode)
         score = 0
-        
+
     env.close()
 
 
@@ -62,54 +71,28 @@ def tensorboard_writer(env_name):
     writer = SummaryWriter(writer_path)
     return writer
 
-
-def SAC_pendulum():
+def DQN_atari(env_name):
     # Generate environment
-    env_name = "Pendulum-v1"
-    env = gym.make(env_name)
+    env = gym.make(env_name, render_mode='human')
 
     # Params
-    num_episode = 500
-    time_step = 300
-    update_freq = 500
-    configs = {
-        "state_space": env.observation_space,
-        "action_space": env.action_space,
-        "memory_size": 10000,
-    }
-
-    # Generate agent
-    agent = SAC(configs)
-
-    # Generate tensorboard writer
-    writer = tensorboard_writer(env_name)
-
-    train(env, agent, num_episode, time_step, update_freq, writer)
-
-def SAC_hopper():
-    # Generate environment
-    env_name = "Hopper-v3"
-    env = gym.make(env_name)
-
-    # Params
-    episode = 1500
+    num_episode = 1000
     time_step = 1000
-    update_freq = 500
+    update_freq = 1000
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
-        "buffer_size": 10000,
+        "replay_start_size": 1e3,
+        "buffer_size": int(1e4),
     }
 
     # Generate agent
-    agent = SAC(configs)
+    agent = DQN(configs)
 
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
-
-    train(env, agent, episode, time_step, update_freq, writer)
+    train_atari(env, agent, num_episode, time_step, update_freq, writer)
 
 
 if __name__ == '__main__':
-    SAC_pendulum()
-    # SAC_hopper()
+    DQN_atari("ALE/BankHeist-v5")
