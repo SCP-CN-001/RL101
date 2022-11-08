@@ -15,12 +15,11 @@ np.random.seed(20)
 
 
 def train(
-    env: gym.Env, agent: SAC, num_episode: int, time_step: int, update_freq: int,
-    writer: SummaryWriter
+    env: gym.Env, agent: SAC, num_episode: int, time_step: int,
+    env_name: str, writer: SummaryWriter
 ):
 
     action_range = [env.action_space.low, env.action_space.high]
-    cnt_step = 0
 
     for episode in range(num_episode):
         score = 0
@@ -37,15 +36,13 @@ def train(
 
             state = next_state
             score += reward
-            cnt_step += 1
             if done:
                 break
-            if cnt_step > update_freq:
+            if len(agent.buffer) > 500:
                 agent.train()
-                cnt_step = 0
 
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
-        writer.add_scalar("score", score, episode)
+        writer.add_scalar("sac_%s_score" % env_name, score, episode)
         score = 0
         
     env.close()
@@ -69,10 +66,10 @@ def SAC_pendulum():
     env = gym.make(env_name)
 
     # Params
-    num_episode = 500
+    num_episode = 1000
     time_step = 300
-    update_freq = 500
     configs = {
+        "tau": 5e-3,
         "state_space": env.observation_space,
         "action_space": env.action_space,
         "memory_size": 10000,
@@ -84,7 +81,7 @@ def SAC_pendulum():
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
 
-    train(env, agent, num_episode, time_step, update_freq, writer)
+    train(env, agent, num_episode, time_step, env_name, writer)
 
 def SAC_hopper():
     # Generate environment
@@ -92,10 +89,10 @@ def SAC_hopper():
     env = gym.make(env_name)
 
     # Params
-    episode = 1500
+    episode = 2000
     time_step = 1000
-    update_freq = 500
     configs = {
+        "tau": 5e-3,
         "state_space": env.observation_space,
         "action_space": env.action_space,
         "buffer_size": 10000,
@@ -107,7 +104,7 @@ def SAC_hopper():
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
 
-    train(env, agent, episode, time_step, update_freq, writer)
+    train(env, agent, episode, time_step, env_name, writer)
 
 
 if __name__ == '__main__':

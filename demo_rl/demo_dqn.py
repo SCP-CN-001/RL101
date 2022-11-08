@@ -32,7 +32,7 @@ def train_atari(
 ):
 
     total_steps = 0
-    cnt_step = 0
+    # cnt_step = 0
 
     for episode in range(num_episode):
         score = 0
@@ -47,11 +47,13 @@ def train_atari(
             state = next_state
             score += reward
             total_steps += 1
+            # cnt_step += 1
             if done:
                 break
-            if cnt_step > update_freq:
+            # if cnt_step > update_freq:
+            if len(agent.buffer) > 1000:
                 agent.train()
-                cnt_step = 0
+                # cnt_step = 0
 
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
         writer.add_scalar("score", score, episode)
@@ -65,7 +67,7 @@ def tensorboard_writer(env_name):
     """
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    writer_path = "./logs/demo_sac/%s/%s/" % (env_name, timestamp)
+    writer_path = "./logs/demo_dqn/%s/%s/" % (env_name, timestamp)
     if not os.path.exists(writer_path):
         os.makedirs(writer_path)
     writer = SummaryWriter(writer_path)
@@ -78,12 +80,12 @@ def DQN_atari(env_name):
     # Params
     num_episode = 1000
     time_step = 1000
-    update_freq = 1000
+    update_freq = 50
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
         "replay_start_size": 1e3,
-        "buffer_size": int(1e4),
+        "buffer_size": int(1e5),
     }
 
     # Generate agent
