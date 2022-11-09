@@ -66,7 +66,7 @@ def SAC_pendulum():
     env = gym.make(env_name)
 
     # Params
-    num_episode = 1000
+    num_episode = 500
     time_step = 300
     configs = {
         "tau": 5e-3,
@@ -89,7 +89,7 @@ def SAC_hopper():
     env = gym.make(env_name)
 
     # Params
-    episode = 2000
+    episode = 3000
     time_step = 1000
     configs = {
         "tau": 5e-3,

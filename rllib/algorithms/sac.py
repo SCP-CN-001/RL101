@@ -41,7 +41,7 @@ class SACActor(nn.Module):
 
         return mean, log_std
 
-    def action(self, state: torch.Tensor)  -> torch.Tensor:
+    def action(self, state: torch.Tensor)  -> np.ndarray:
         mean, log_std = self.forward(state)
         std = log_std.exp()
         normal = Normal(mean, std)
