@@ -1,7 +1,4 @@
-from abc import ABC, abstractmethod
-
-
-class ConfigBase(ABC):
+class ConfigBase:
     def __init__(self):
         # runtime
         self.n_epoch = None
@@ -10,12 +7,12 @@ class ConfigBase(ABC):
         # environment
         self.state_space = None
         self.action_space = None
-        self.state_dim: tuple = None
-        self.action_dim: tuple = None
+        self.state_dim = None
+        self.action_dim = None
 
         # model
         self.gamma: float = 0.99    # reward discount factor
-        self.batch_size:int = 32    # batch size
+        self.batch_size:int = 128   # batch size
         self.lr: float = 1e-3           # learning rate
 
         # explore

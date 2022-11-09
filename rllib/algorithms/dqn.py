@@ -25,7 +25,7 @@ class QNetwork(nn.Module):
             nn.ReLU()
         )
 
-        self.fc1 = nn.Linear(3136, 512)
+        self.fc1 = nn.Linear(7*7*64, 512)
         self.fc2 = nn.Linear(512, num_actions)
     
     def forward(self, state: torch.Tensor) -> torch.Tensor:
@@ -36,10 +36,11 @@ class QNetwork(nn.Module):
 
         return x
 
-    def action(self, state: torch.Tensor) -> torch.Tensor:
+    def action(self, state: torch.Tensor) -> int:
         x = self.forward(state)
         action = x.max(1)[1].view(1,1)
-        
+        action = action.detach().cpu().numpy()[0][0]
+
         return action
 
 
@@ -54,10 +55,6 @@ class DQNConfig(ConfigBase):
                 setattr(self, key, configs[key])
             else:
                 raise AttributeError("[%s] is not defined for DQNConfig!" % key)
-        if "state_dim" not in configs.keys():
-            self.state_dim = self.state_space.shape[0]
-        else:
-            self.state_dim = configs["state_dim"]
         if "action_dim" not in configs.keys():
             self.num_actions = self.action_space.n
         else:
@@ -80,6 +77,7 @@ class DQNConfig(ConfigBase):
         self.q_net_kwargs = {
             "num_actions": self.num_actions
         }
+        self.target_update_freq = 1e4
 
         self.merge_configs(configs)
 
@@ -90,6 +88,8 @@ class DQN(AgentBase):
     """
     def __init__(self, configs: dict):
         super().__init__(DQNConfig, configs)
+
+        self.learn_step_counter = 0
 
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
@@ -104,8 +104,9 @@ class DQN(AgentBase):
     def get_action(self, state, num_step: int = None):
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).to(device)
+        state = state.unsqueeze(0)
         action = self.policy_net.action(state)
-        action = epsilon_greedy(action,  num_step, device, self.configs)
+        action = epsilon_greedy(action,  num_step, self.configs)
         
         return action
     
@@ -113,20 +114,26 @@ class DQN(AgentBase):
         if len(self.buffer) < self.configs.replay_start_size:
             return
         
+        self.learn_step_counter += 1
+        
         batches = self.buffer.sample(self.configs.batch_size)
         state = torch.FloatTensor(batches["state"]).to(device)
-        action = torch.FloatTensor(batches["action"]).to(device)
-        reward = torch.FloatTensor(batches["reward"]).unsqueeze(-1).to(device)
+        action = torch.LongTensor(batches["action"]).to(device)
+        reward = torch.FloatTensor(batches["reward"]).to(device)
         next_state = torch.FloatTensor(batches["next_state"]).to(device)
-        done = torch.FloatTensor(batches["done"]).unsqueeze(-1).to(device)
+        done = torch.FloatTensor(batches["done"]).to(device)
 
         # loss function
-        q_value = self.policy_net.action(state).gather(1, action)
+        q_value = self.policy_net(state).gather(1, action)
         q_next = self.target_net(next_state).max(1)[0].detach()
-        q_target = q_next * self.configs.gamma + reward
+        q_target = (reward + q_next * self.configs.gamma * done).unsqueeze(-1)
         loss = F.mse_loss(q_value, q_target)
 
         # optimization
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        # update target net
+        if self.learn_step_counter % self.configs.target_update_freq == 0:
+            self.target_net.load_state_dict(self.policy_net.state_dict())

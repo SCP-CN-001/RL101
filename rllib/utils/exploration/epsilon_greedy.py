@@ -1,14 +1,10 @@
 import random
 import math
 
-import torch
-
 from rllib.algorithms.base.config import ConfigBase
 
 
-def epsilon_greedy(
-    action: torch.Tensor, num_step: int, device: torch.device, configs: ConfigBase
-) -> torch.Tensor:
+def epsilon_greedy(action, num_step: int, configs: ConfigBase):
     if configs.reduce_epsilon:
         # skip exploration if the maximum exploration step is reached
         if num_step > configs.maximum_exploration_step:
@@ -21,5 +17,5 @@ def epsilon_greedy(
     else:
         epsilon_threshold = configs.epsilon
     if random.random() < epsilon_threshold:
-        return torch.tensor(configs.action_space.sample()).to(device)
+        return configs.action_space.sample()
     return action
