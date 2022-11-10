@@ -1,16 +1,15 @@
-name: workspace
+name: rllib
 channels:
   - pytorch
+  - nvidia
   - conda-forge
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
   - _openmp_mutex=5.1=1_gnu
-  - _tflow_select=2.3.0=mkl
   - absl-py=1.3.0=pyhd8ed1ab_0
-  - aiosignal=1.2.0=pyhd8ed1ab_0
-  - astor=0.8.1=pyh9f0ad1d_0
-  - astunparse=1.6.3=pyhd8ed1ab_0
+  - aiohttp=3.8.1=py38h0a891b7_1
+  - aiosignal=1.3.1=pyhd8ed1ab_0
   - async-timeout=4.0.2=py38h06a4308_0
   - attrs=22.1.0=pyh71513ae_1
   - blas=1.0=mkl
@@ -23,56 +22,92 @@ dependencies:
   - certifi=2022.9.24=pyhd8ed1ab_0
   - cffi=1.15.1=py38h74dc2b5_0
   - charset-normalizer=2.0.4=pyhd3eb1b0_0
+  - click=8.1.3=unix_pyhd8ed1ab_2
   - cloudpickle=2.2.0=pyhd8ed1ab_0
   - cryptography=38.0.1=py38h9ce1e76_0
-  - cudatoolkit=11.3.1=h2bc3f7f_2
-  - cycler=0.11.0=pyhd8ed1ab_0
+  - cuda=11.6.2=0
+  - cuda-cccl=11.6.55=hf6102b2_0
+  - cuda-command-line-tools=11.6.2=0
+  - cuda-compiler=11.6.2=0
+  - cuda-cudart=11.6.55=he381448_0
+  - cuda-cudart-dev=11.6.55=h42ad0f4_0
+  - cuda-cuobjdump=11.6.124=h2eeebcb_0
+  - cuda-cupti=11.6.124=h86345e5_0
+  - cuda-cuxxfilt=11.6.124=hecbf4f6_0
+  - cuda-driver-dev=11.6.55=0
+  - cuda-gdb=11.8.86=0
+  - cuda-libraries=11.6.2=0
+  - cuda-libraries-dev=11.6.2=0
+  - cuda-memcheck=11.8.86=0
+  - cuda-nsight=11.8.86=0
+  - cuda-nsight-compute=11.8.0=0
+  - cuda-nvcc=11.6.124=hbba6d2d_0
+  - cuda-nvdisasm=11.8.86=0
+  - cuda-nvml-dev=11.6.55=haa9ef22_0
+  - cuda-nvprof=11.8.87=0
+  - cuda-nvprune=11.6.124=he22ec0a_0
+  - cuda-nvrtc=11.6.124=h020bade_0
+  - cuda-nvrtc-dev=11.6.124=h249d397_0
+  - cuda-nvtx=11.6.124=h0630a44_0
+  - cuda-nvvp=11.8.87=0
+  - cuda-runtime=11.6.2=0
+  - cuda-samples=11.6.101=h8efea70_0
+  - cuda-sanitizer-api=11.8.86=0
+  - cuda-toolkit=11.6.2=0
+  - cuda-tools=11.6.2=0
+  - cuda-visual-tools=11.6.2=0
   - ffmpeg=4.3=hf484d3e_0
-  - fftw=3.3.10=nompi_h77c792f_102
   - freetype=2.12.1=h4a9f257_0
-  - future=0.18.2=pyhd8ed1ab_6
-  - gast=0.4.0=pyh9f0ad1d_0
-  - geos=3.10.2=h9c3ff4c_0
+  - frozenlist=1.2.0=py38h7f8727e_0
+  - gds-tools=1.4.0.31=0
   - giflib=5.2.1=h7b6447c_0
   - gmp=6.2.1=h295c915_3
   - gnutls=3.6.15=he1e5248_0
+  - google-auth=2.14.0=pyh1a96a4e_0
   - google-auth-oauthlib=0.4.6=pyhd8ed1ab_0
-  - google-pasta=0.2.0=pyh8c360ce_0
+  - grpcio=1.42.0=py38hce63b2e_0
   - gym=0.21.0=py38he5a9106_2
-  - h5py=2.10.0=nompi_py38h513d04c_102
-  - hdf5=1.10.5=nompi_h5b725eb_1114
-  - icu=67.1=he1b5a44_0
   - idna=3.4=py38h06a4308_0
   - importlib-metadata=5.0.0=pyha770c72_1
   - intel-openmp=2021.4.0=h06a4308_3561
   - jpeg=9e=h7f8727e_0
-  - keras-preprocessing=1.1.2=pyhd8ed1ab_0
-  - kiwisolver=1.4.2=py38h295c915_0
   - lame=3.100=h7b6447c_0
   - lcms2=2.12=h3be6417_0
   - ld_impl_linux-64=2.38=h1181459_1
   - lerc=3.0=h295c915_0
+  - libcublas=11.11.3.6=0
+  - libcublas-dev=11.11.3.6=0
+  - libcufft=10.9.0.58=0
+  - libcufft-dev=10.9.0.58=0
+  - libcufile=1.4.0.31=0
+  - libcufile-dev=1.4.0.31=0
+  - libcurand=10.3.0.86=0
+  - libcurand-dev=10.3.0.86=0
+  - libcusolver=11.4.1.48=0
+  - libcusolver-dev=11.4.1.48=0
+  - libcusparse=11.7.5.86=0
+  - libcusparse-dev=11.7.5.86=0
   - libdeflate=1.8=h7f8727e_5
   - libffi=3.3=he6710b0_2
   - libgcc-ng=11.2.0=h1234567_1
-  - libgfortran-ng=12.2.0=h69a702a_19
-  - libgfortran5=12.2.0=h337968e_19
   - libgomp=11.2.0=h1234567_1
   - libiconv=1.16=h7f8727e_2
   - libidn2=2.3.2=h7f8727e_0
+  - libnpp=11.8.0.86=0
+  - libnpp-dev=11.8.0.86=0
+  - libnvjpeg=11.9.0.86=0
+  - libnvjpeg-dev=11.9.0.86=0
   - libpng=1.6.37=hbc83047_0
   - libprotobuf=3.15.8=h780b84a_1
   - libstdcxx-ng=11.2.0=h1234567_1
   - libtasn1=4.16.0=h27cfd23_0
-  - libtiff=4.4.0=hecacb30_0
+  - libtiff=4.4.0=hecacb30_1
   - libunistring=0.9.10=h27cfd23_0
   - libwebp=1.2.4=h11a3e52_0
   - libwebp-base=1.2.4=h5eee18b_0
   - lz4-c=1.9.3=h295c915_1
   - markdown=3.4.1=pyhd8ed1ab_0
   - markupsafe=2.1.1=py38h0a891b7_1
-  - matplotlib=3.2.2=1
-  - matplotlib-base=3.2.2=py38h5d868c9_1
   - mkl=2021.4.0=h06a4308_640
   - mkl-service=2.4.0=py38h7f8727e_0
   - mkl_fft=1.3.1=py38hd3c417c_0
@@ -80,108 +115,55 @@ dependencies:
   - multidict=6.0.2=py38h0a891b7_1
   - ncurses=6.3=h5eee18b_3
   - nettle=3.7.3=hbbd107a_1
-  - numpy=1.23.3=py38h14f4228_0
-  - numpy-base=1.23.3=py38h31eccc5_0
+  - nsight-compute=2022.3.0.22=0
+  - numpy=1.23.3=py38h14f4228_1
+  - numpy-base=1.23.3=py38h31eccc5_1
   - oauthlib=3.2.2=pyhd8ed1ab_0
   - openh264=2.1.1=h4ff587b_0
   - openssl=1.1.1s=h7f8727e_0
-  - opt_einsum=3.3.0=pyhd8ed1ab_1
   - pillow=9.2.0=py38hace64e9_1
   - pip=22.2.2=py38h06a4308_0
+  - protobuf=3.15.8=py38h709712a_0
   - pyasn1=0.4.8=py_0
+  - pyasn1-modules=0.2.7=py_0
   - pycparser=2.21=pyhd3eb1b0_0
-  - pyglet=1.5.27=py38h578d9bd_1
   - pyjwt=2.6.0=pyhd8ed1ab_0
   - pyopenssl=22.0.0=pyhd3eb1b0_0
-  - pyparsing=3.0.9=pyhd8ed1ab_0
   - pysocks=1.7.1=py38h06a4308_0
   - python=3.8.13=haa1d7c7_1
-  - python-dateutil=2.8.2=pyhd8ed1ab_0
-  - python-flatbuffers=2.0=pyhd8ed1ab_0
   - python_abi=3.8=2_cp38
-  - pytorch=1.13.0=py3.8_cpu_0
-  - pytorch-mutex=1.0=cpu
+  - pytorch=1.13.0=py3.8_cuda11.6_cudnn8.3.2_0
+  - pytorch-cuda=11.6=h867d48c_0
+  - pytorch-mutex=1.0=cuda
   - pyu2f=0.1.5=pyhd8ed1ab_0
   - readline=8.2=h5eee18b_0
   - requests=2.28.1=py38h06a4308_0
   - requests-oauthlib=1.3.1=pyhd8ed1ab_0
   - rsa=4.9=pyhd8ed1ab_0
-  - setuptools=63.4.1=py38h06a4308_0
-  - shapely=1.8.1=py38h97f7145_0
+  - setuptools=65.5.0=py38h06a4308_0
   - six=1.16.0=pyhd3eb1b0_1
   - sqlite=3.39.3=h5082296_0
-  - tensorboard=2.10.1=pyhd8ed1ab_0
+  - tensorboard=2.11.0=pyhd8ed1ab_0
   - tensorboard-data-server=0.6.0=py38h2b5fc30_2
   - tensorboard-plugin-wit=1.8.1=pyhd8ed1ab_0
-  - tensorflow=2.4.1=mkl_py38hb2083e0_0
-  - tensorflow-base=2.4.1=mkl_py38h43e0292_0
-  - tensorflow-estimator=2.6.0=py38h709712a_0
-  - termcolor=2.1.0=pyhd8ed1ab_0
   - tk=8.6.12=h1ccaba5_0
-  - torchaudio=0.13.0=py38_cpu
-  - torchvision=0.14.0=py38_cpu
-  - tornado=6.1=py38h0a891b7_3
+  - torchaudio=0.13.0=py38_cu116
+  - torchvision=0.14.0=py38_cu116
   - typing_extensions=4.3.0=py38h06a4308_0
   - urllib3=1.26.12=py38h06a4308_0
   - werkzeug=2.2.2=pyhd8ed1ab_0
   - wheel=0.37.1=pyhd3eb1b0_0
-  - wrapt=1.14.1=py38h0a891b7_0
   - xz=5.2.6=h5eee18b_0
+  - yarl=1.7.2=py38h0a891b7_2
   - zipp=3.10.0=pyhd8ed1ab_0
   - zlib=1.2.13=h5eee18b_0
   - zstd=1.5.2=ha4553b6_0
   - pip:
-    - aiohttp==3.8.3
-    - aiohttp-cors==0.7.0
     - ale-py==0.7.5
-    - atari-py==0.2.9
     - autorom==0.4.2
     - autorom-accept-rom-license==0.4.2
-    - blessed==1.19.1
     - box2d-py==2.3.5
-    - click==8.0.4
-    - colorful==0.5.4
-    - distlib==0.3.6
-    - dm-tree==0.1.7
-    - filelock==3.8.0
-    - frozenlist==1.3.1
-    - google-api-core==2.10.2
-    - google-auth==2.13.0
-    - googleapis-common-protos==1.56.4
-    - gpustat==1.0.0
-    - grpcio==1.43.0
-    - imageio==2.22.2
     - importlib-resources==5.10.0
-    - jsonschema==4.16.0
-    - lz4==4.0.2
-    - msgpack==1.0.4
-    - networkx==2.8.7
-    - nvidia-ml-py==11.495.46
-    - opencensus==0.11.0
-    - opencensus-context==0.1.3
-    - packaging==21.3
-    - pandas==1.5.1
-    - pkgutil-resolve-name==1.3.10
-    - platformdirs==2.5.2
-    - prometheus-client==0.13.1
-    - protobuf==3.20.1
-    - psutil==5.9.3
-    - py-spy==0.3.14
-    - pyasn1-modules==0.2.8
-    - pydantic==1.10.2
-    - pyrsistent==0.19.1
-    - pytz==2022.5
-    - pywavelets==1.4.1
-    - pyyaml==6.0
-    - ray==2.0.1
-    - scikit-image==0.19.3
-    - scipy==1.9.3
-    - smart-open==6.2.0
-    - tabulate==0.9.0
-    - tensorboardx==2.5.1
-    - tifffile==2022.10.10
+    - pyglet==2.0.0
     - tqdm==4.64.1
-    - virtualenv==20.16.6
-    - wcwidth==0.2.5
-    - yarl==1.8.1
-prefix: /home/rowena/miniconda3/envs/workspace
+prefix: /home/rowena/miniconda3/envs/rllib

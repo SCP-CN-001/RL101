@@ -2,12 +2,12 @@ import sys
 sys.path.append(".")
 sys.path.append("..")
 import os
+os.environ["SDL_VIDEODRIVER"]="dummy"
 import time
 
 import numpy as np
 from PIL import Image
 import gym
-import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 from rllib.algorithms.dqn import DQN
@@ -67,11 +67,11 @@ def train(
             cnt_step += 1
             if done:
                 break
-            if cnt_step > update_freq:
-            # if len(agent.buffer) > 1000:
-                agent.train()
-                print("Updating the Q-network")
-                cnt_step = 0
+        if cnt_step > update_freq:
+        # if len(agent.buffer) > 1000:
+            agent.train()
+            print("Updating the Q-network")
+            cnt_step = 0
 
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
         name = env_name.split("/")[-1]
@@ -93,7 +93,7 @@ def DQN_atari(env_name):
         "action_space": env.action_space,
         "replay_start_size": 1e3,
         "buffer_size": int(1e6),
-        "target_update_freq": 1,
+        "target_update_freq": 5,
     }
 
     # Generate agent

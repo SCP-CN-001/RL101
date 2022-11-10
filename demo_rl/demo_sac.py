@@ -2,6 +2,7 @@ import sys
 sys.path.append(".")
 sys.path.append("..")
 import os
+# os.environ["SDL_VIDEODRIVER"]="dummy"
 import time
 
 import numpy as np
