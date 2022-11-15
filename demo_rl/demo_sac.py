@@ -54,7 +54,7 @@ def tensorboard_writer(env_name):
     """
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    writer_path = "./logs/demo_sac/%s/%s/" % (env_name, timestamp)
+    writer_path = "./logs/sac/%s/%s/" % (env_name, timestamp)
     if not os.path.exists(writer_path):
         os.makedirs(writer_path)
     writer = SummaryWriter(writer_path)

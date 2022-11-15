@@ -30,7 +30,7 @@ class QNetwork(nn.Module):
     
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         x = self.net(state)
-        x = x.view(-1, 3136)
+        x = x.view(x.size(0), -1)
         x = self.fc1(x)
         x = self.fc2(x)
 
@@ -90,6 +90,8 @@ class DQN(AgentBase):
         super().__init__(DQNConfig, configs)
 
         self.learn_step_counter = 0
+        if self.configs.reduce_epsilon:
+            self.action_step_counter = 0
 
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
@@ -101,12 +103,14 @@ class DQN(AgentBase):
         # the replay buffer
         self.buffer = ReplayBuffer(self.configs.buffer_size)
 
-    def get_action(self, state, num_step: int = None):
+    def get_action(self, state):
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).to(device)
         state = state.unsqueeze(0)
         action = self.policy_net.action(state)
-        action = epsilon_greedy(action,  num_step, self.configs)
+        action = epsilon_greedy(action,  self.action_step_counter, self.configs)
+        if self.configs.reduce_epsilon:
+            self.action_step_counter += 1
         
         return action
     

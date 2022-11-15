@@ -15,7 +15,7 @@ def epsilon_greedy(action, num_step: int, configs: ConfigBase):
                 (configs.initial_epsilon-configs.final_epsilon) \
                     * math.exp(- num_step * configs.decay_rate)
     else:
-        epsilon_threshold = configs.epsilon
+        epsilon_threshold = 1 - configs.epsilon
     if random.random() < epsilon_threshold:
         return configs.action_space.sample()
     return action
