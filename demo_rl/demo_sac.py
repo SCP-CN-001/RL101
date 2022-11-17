@@ -12,9 +12,6 @@ from torch.utils.tensorboard import SummaryWriter
 from rllib.algorithms.sac import SAC
 
 
-np.random.seed(20)
-
-
 class ActionProcessor:
     def __init__(self, action_space):
         self.action_space = action_space
@@ -60,7 +57,10 @@ def train(env: gym.Env, agent: SAC, n_step: int, env_name: str, writer: SummaryW
         agent.train()
 
         if i % 1000 == 0:
-            average_return = np.mean(scores)
+            if len(scores) == 0:
+                continue
+            else:
+                average_return = np.mean(scores)
             print("The average return is %f" % average_return)
             writer.add_scalar("sac_%s_average_return" % env_name, average_return, i)
             scores = []
@@ -78,6 +78,7 @@ def tensorboard_writer(env_name):
         os.makedirs(writer_path)
     writer = SummaryWriter(writer_path)
     return writer
+
 
 def SAC_mujoco(env_name):
     # Generate environment
@@ -97,9 +98,9 @@ def SAC_mujoco(env_name):
 
 
 if __name__ == '__main__':
-    # env_name = "Hopper-v3"
-    env_name = "Walker2d-v3"
+    env_name = "Hopper-v3"
+    # env_name = "Walker2d-v3"
     # env_name = "HalfCheetah-v2"
     # env_name = "Ant-v2" # n_step=int(3e6)
-    # env_name = "Humanoid-v1" # n_step = int(1e7)
+    # env_name = "Humanoid-v3" # n_step = int(1e7)
     SAC_mujoco(env_name)

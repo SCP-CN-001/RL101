@@ -29,6 +29,7 @@ class SACActor(nn.Module):
             nn.Linear(state_dim, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, hidden_size),
+            nn.ReLU()
         )
         self.mean_layer = nn.Linear(hidden_size, action_dim)
         self.log_std_layer = nn.Linear(hidden_size, action_dim)
@@ -44,9 +45,9 @@ class SACActor(nn.Module):
     def action(self, state: torch.Tensor)  -> np.ndarray:
         mean, log_std = self.forward(state)
         std = log_std.exp()
-        normal = Normal(mean, std)
+        dist = Normal(mean, std)
 
-        z = normal.sample()
+        z = dist.sample()
         action = torch.tanh(z).detach().cpu().numpy()
 
         return action
@@ -56,13 +57,13 @@ class SACActor(nn.Module):
         """
         mean, log_std = self.forward(state)
         std = log_std.exp()
-        normal = Normal(mean, std)
+        dist = Normal(mean, std)
         noise = Normal(0, 1)
 
         z = noise.sample()
         z = z.to(device)
         action = torch.tanh(mean + std * z)
-        log_prob = normal.log_prob(mean + std * z) - torch.log(1 - action.pow(2) + self.epsilon)
+        log_prob = dist.log_prob(mean + std * z) - torch.log(1 - action.pow(2) + self.epsilon)
 
         return action, log_prob
 
