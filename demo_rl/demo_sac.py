@@ -15,36 +15,55 @@ from rllib.algorithms.sac import SAC
 np.random.seed(20)
 
 
-def train(
-    env: gym.Env, agent: SAC, num_episode: int, time_step: int,
-    env_name: str, writer: SummaryWriter
-):
+class ActionProcessor:
+    def __init__(self, action_space):
+        self.action_space = action_space
+        self.action_range = [action_space.low, action_space.high]
 
-    action_range = [env.action_space.low, env.action_space.high]
+    def process(self, action):
+        action = action * \
+            (self.action_range[1] - self.action_range[0]) / 2.0 + \
+                (self.action_range[1] + self.action_range[0]) / 2.0
+        return action
 
-    for episode in range(num_episode):
-        score = 0
-        state = env.reset()
-        for i in range(time_step):
-            env.render()
-            action = agent.get_action(state)
-            # action output range[-1,1],expand to allowable range
-            action_in =  action * (action_range[1] - action_range[0]) / 2.0 +  (action_range[1] + action_range[0]) / 2.0
 
-            next_state, reward, done, _ = env.step(action_in)
-            done_mask = 0.0 if done else 1.0
-            agent.buffer.push((state, action, reward, done_mask))
+def train(env: gym.Env, agent: SAC, n_step: int, env_name: str, writer: SummaryWriter):
 
-            state = next_state
-            score += reward
-            if done:
-                break
-            if len(agent.buffer) > 500:
-                agent.train()
+    action_processor = ActionProcessor(env.action_space)
+    
+    done = False
+    score = 0
+    scores = []
+    state = env.reset()
+    cnt_episode = 0
 
-        print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
-        writer.add_scalar("sac_%s_score" % env_name, score, episode)
-        score = 0
+    for i in range(n_step):
+        if done:
+            print("Episode: %d, score: %f, buffer capacity: %d" \
+                % (cnt_episode, score, len(agent.buffer)))
+            cnt_episode +=1
+            scores.append(score)
+            score = 0
+            state = env.reset()
+            done = False
+
+        env.render()
+        action = agent.get_action(state)
+        # action output range[-1,1],expand to allowable range
+        action_in =  action_processor.process(action)
+        next_state, reward, done, _ = env.step(action_in)
+        done_mask = 0.0 if done else 1.0
+        agent.buffer.push((state, action, reward, done_mask))
+        state = next_state
+        score += reward
+
+        agent.train()
+
+        if i % 1000 == 0:
+            average_return = np.mean(scores)
+            print("The average return is %f" % average_return)
+            writer.add_scalar("sac_%s_average_return" % env_name, average_return, i)
+            scores = []
         
     env.close()
 
@@ -60,54 +79,27 @@ def tensorboard_writer(env_name):
     writer = SummaryWriter(writer_path)
     return writer
 
-
-def SAC_pendulum():
+def SAC_mujoco(env_name):
     # Generate environment
-    env_name = "Pendulum-v1"
     env = gym.make(env_name)
-
     # Params
-    num_episode = 500
-    time_step = 300
+    n_step = int(1e6)
     configs = {
-        "tau": 5e-3,
         "state_space": env.observation_space,
         "action_space": env.action_space,
-        "memory_size": 10000,
+        "buffer_size": int(1e6),
     }
-
     # Generate agent
     agent = SAC(configs)
-
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
-
-    train(env, agent, num_episode, time_step, env_name, writer)
-
-def SAC_hopper():
-    # Generate environment
-    env_name = "Hopper-v3"
-    env = gym.make(env_name)
-
-    # Params
-    episode = 3000
-    time_step = 1000
-    configs = {
-        "tau": 5e-3,
-        "state_space": env.observation_space,
-        "action_space": env.action_space,
-        "buffer_size": 10000,
-    }
-
-    # Generate agent
-    agent = SAC(configs)
-
-    # Generate tensorboard writer
-    writer = tensorboard_writer(env_name)
-
-    train(env, agent, episode, time_step, env_name, writer)
+    train(env, agent, n_step, env_name, writer)
 
 
 if __name__ == '__main__':
-    SAC_pendulum()
-    # SAC_hopper()
+    # env_name = "Hopper-v3"
+    env_name = "Walker2d-v3"
+    # env_name = "HalfCheetah-v2"
+    # env_name = "Ant-v2" # n_step=int(3e6)
+    # env_name = "Humanoid-v1" # n_step = int(1e7)
+    SAC_mujoco(env_name)

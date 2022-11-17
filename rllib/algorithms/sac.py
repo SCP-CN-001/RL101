@@ -205,6 +205,7 @@ class SAC(AgentBase):
 
         # soft Q loss
         next_action, next_log_prob = self.policy_net.evaluate(next_state)
+        next_log_prob = next_log_prob.sum(-1, keepdim=True)
         q1_target = self.q1_target_net(next_state, next_action)
         q2_target = self.q2_target_net(next_state, next_action)
         q_target = reward + done * self.configs.gamma * (torch.min(q1_target, q2_target) - self.alpha.detach() * next_log_prob)
@@ -224,6 +225,7 @@ class SAC(AgentBase):
 
         # policy loss
         action_, log_prob = self.policy_net.evaluate(state)
+        log_prob = log_prob.sum(-1, keepdim=True)
         q1_value = self.q1_net(state, action_)
         q2_value = self.q2_net(state, action_)
         policy_loss = (self.alpha.detach() * log_prob - torch.min(q1_value, q2_value)).mean()
