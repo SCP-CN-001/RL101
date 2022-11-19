@@ -9,7 +9,7 @@ import numpy as np
 import gym
 from torch.utils.tensorboard import SummaryWriter
 
-from rllib.algorithms.sac import SAC
+from rllib.algorithms.ddpg import DDPG
 
 
 class ActionProcessor:
@@ -24,10 +24,10 @@ class ActionProcessor:
         return action
 
 
-def train(env: gym.Env, agent: SAC, n_step: int, env_name: str, writer: SummaryWriter):
+def train(env: gym.Env, agent: DDPG, n_step: int, env_name: str, writer: SummaryWriter):
 
     action_processor = ActionProcessor(env.action_space)
-    
+
     done = False
     score = 0
     scores = []
@@ -43,8 +43,8 @@ def train(env: gym.Env, agent: SAC, n_step: int, env_name: str, writer: SummaryW
             score = 0
             state = env.reset()
             done = False
-
-        # env.render() # render mujoco environment will take a large part of cpu resource, though it's funny.
+        
+        # env.render()
         action = agent.get_action(state)
         # action output range[-1,1],expand to allowable range
         action_in =  action_processor.process(action)
@@ -73,14 +73,14 @@ def tensorboard_writer(env_name):
     """
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    writer_path = "./logs/sac/%s/%s/" % (env_name, timestamp)
+    writer_path = "./logs/ddpg/%s/%s/" % (env_name, timestamp)
     if not os.path.exists(writer_path):
         os.makedirs(writer_path)
     writer = SummaryWriter(writer_path)
     return writer
 
 
-def SAC_mujoco(env_name):
+def DDPG_mujoco(env_name):
     # Generate environment
     env = gym.make(env_name)
     # Params
@@ -88,19 +88,15 @@ def SAC_mujoco(env_name):
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
-        "buffer_size": int(1e6),
     }
     # Generate agent
-    agent = SAC(configs)
+    agent = DDPG(configs)
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
     train(env, agent, n_step, env_name, writer)
 
 
 if __name__ == '__main__':
-    env_name = "Hopper-v3"
-    # env_name = "Walker2d-v3"
-    # env_name = "HalfCheetah-v3" # n_step=int(3e6)
-    # env_name = "Ant-v2" # n_step=int(3e6)
-    # env_name = "Humanoid-v3" # n_step = int(1e7)
-    SAC_mujoco(env_name)
+    env_name = "HalfCheetah-v3"
+
+    DDPG_mujoco(env_name)

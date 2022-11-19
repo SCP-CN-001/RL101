@@ -71,7 +71,7 @@ def train(
 
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
         name = env_name.split("/")[-1]
-        writer.add_scalar("dqn_%s_score" % name, score, episode)
+        writer.add_scalar("%s_average_return" % name, score, episode)
 
     env.close()
 
