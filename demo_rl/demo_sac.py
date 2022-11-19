@@ -2,7 +2,7 @@ import sys
 sys.path.append(".")
 sys.path.append("..")
 import os
-# os.environ["SDL_VIDEODRIVER"]="dummy"
+os.environ["SDL_VIDEODRIVER"]="dummy"
 import time
 
 import numpy as np
@@ -44,7 +44,7 @@ def train(env: gym.Env, agent: SAC, n_step: int, env_name: str, writer: SummaryW
             state = env.reset()
             done = False
 
-        env.render()
+        # env.render() # render mujoco environment will take a large part of cpu resource, though it's funny.
         action = agent.get_action(state)
         # action output range[-1,1],expand to allowable range
         action_in =  action_processor.process(action)
@@ -100,7 +100,7 @@ def SAC_mujoco(env_name):
 if __name__ == '__main__':
     env_name = "Hopper-v3"
     # env_name = "Walker2d-v3"
-    # env_name = "HalfCheetah-v2"
+    # env_name = "HalfCheetah-v2" # n_step=int(3e6)
     # env_name = "Ant-v2" # n_step=int(3e6)
     # env_name = "Humanoid-v3" # n_step = int(1e7)
     SAC_mujoco(env_name)
