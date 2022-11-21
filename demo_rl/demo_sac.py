@@ -100,7 +100,7 @@ def SAC_mujoco(env_name):
 if __name__ == '__main__':
     env_name = "Hopper-v3"
     # env_name = "Walker2d-v3"
-    # env_name = "HalfCheetah-v3" # n_step=int(3e6)
+    # env_name = "HalfCheetah-v2" # n_step=int(3e6)
     # env_name = "Ant-v2" # n_step=int(3e6)
     # env_name = "Humanoid-v3" # n_step = int(1e7)
     SAC_mujoco(env_name)

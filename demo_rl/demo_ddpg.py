@@ -97,6 +97,7 @@ def DDPG_mujoco(env_name):
 
 
 if __name__ == '__main__':
-    env_name = "HalfCheetah-v3"
-
+    env_name = "Hopper-v3"
+    # env_name = "Walker2d-v3"
+    # env_name = "HalfCheetah-v2"
     DDPG_mujoco(env_name)
