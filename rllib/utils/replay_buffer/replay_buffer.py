@@ -39,6 +39,12 @@ class ReplayBuffer:
         np.random.shuffle(idx_list)
         return self.get_items(idx_list)
 
+    def all(self):
+        batches = {}
+        for key, value in self.buffer.items():
+            batches[key] = np.array(list(value))
+        return batches
+
     def clear(self):
         for item in self.items:
             self.buffer[item].clear()

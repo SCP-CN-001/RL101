@@ -83,6 +83,8 @@ class DDPGCritic(nn.Module):
 
 
 class DDPGConfig(ConfigBase):
+    """Configuration of the DDPG model
+    """
     def __init__(self, configs: dict):
         super().__init__()
 
@@ -110,7 +112,7 @@ class DDPGConfig(ConfigBase):
         self.buffer_size: int = int(1e6)
         self.ou_theta = 0.15          # for exploration based on Ornstein–Uhlenbeck process
         self.ou_sigma = 0.2
-        self.ou_step = 0.02
+        self.ou_step = 0.002
 
         ## actor net
         self.lr_actor = 1e-4
@@ -138,7 +140,8 @@ class DDPGConfig(ConfigBase):
 
 
 class DDPG(AgentBase):
-    """_summary_
+    """Deep Deterministic Policy Gradient (DDPG)
+    An implementation of DDPG based on the original paper 'Continuous control with deep reinforcement learning'
     """
     def __init__(self, configs: dict):
         super().__init__(DDPGConfig, configs)
