@@ -28,25 +28,22 @@ class PPOActor(nn.Module):
             nn.Tanh()
         )
         self.mean_layer = nn.Linear(hidden_size, action_dim)
-        self.log_std_layer = nn.Linear(hidden_size, action_dim)
+        self.log_std = nn.Parameter(torch.zeros(action_dim))
         self.softmax = nn.Softmax(-1)
         
     def forward(self, state: torch.Tensor):
         x = self.net(state)
         mean = self.mean_layer(x)
-        log_std = self.log_std_layer(x)
 
-        return mean, log_std
+        return mean
 
     def action(self, state: torch.Tensor) -> np.ndarray:
         if self.discrete:
-            probs, _ = self.forward(state)
+            probs = self.forward(state)
             probs = self.softmax(probs)
             dist = Categorical(probs)
         else:
-            mean, log_std = self.forward(state)
-            std = torch.exp(log_std)
-            dist = Normal(mean, std)
+            dist = self.get_norm_dist(state)
         
         action = dist.sample()
         log_prob = dist.log_prob(action)
@@ -55,9 +52,16 @@ class PPOActor(nn.Module):
 
         return action, log_prob
 
+    def get_norm_dist(self, state: torch.Tensor):
+        mean = self.forward(state)
+        log_std = self.log_std.expand_as(mean)
+        std = torch.exp(log_std)
+        dist = Normal(mean, std)
+
+        return dist
 
 class PPOCritic(nn.Module):
-    def __init__(self, state_dim: int, hidden_size: int) -> Tuple[np.ndarray]:
+    def __init__(self, state_dim: int, hidden_size: int):
         super(PPOCritic, self).__init__()
         self.net = nn.Sequential(
             nn.Linear(state_dim, hidden_size),
@@ -124,35 +128,15 @@ class PPOConfig(ConfigBase):
         ## By default none of the tricks are used, and the performance of the 
         ## minimalism-style PPO is not very beautiful. 
 
-        # orthogonal initialize the networks
-        self.orthogonal_init = False
-        # state normalization
-        self.state_norm = False
-        # reward scaling/normalization/clipping
-        self.reward_process = None
-        self.reward_clip_range = 5
         # advantage normalization
         self.advantage_norm = False
-        # 
-        self.policy_entropy = False
-        # learning rate decay
-        self.lr_decay = False
-        self.lr_actor_final = 1e-4
-        self.lr_critic_final = 1e-4
-        self.total_iter = 1e4
+        # policy entropy
+        self.entropy_coef = None
         # gradient clipping
         self.gradient_clip = False
         self.gradient_clip_range = 0.5
         
         self.merge_configs(configs)
-
-        if self.reward_process is not None \
-            and self.reward_process not in ["normalization", "clipping", "scaling"]:
-            raise NotImplementedError(
-                "The required reward preprocess method %s is not defined." \
-                    % self.reward_process
-            )
-
 
 class PPO(AgentBase):
     """Proximal Policy Optimization (PPO)
@@ -175,19 +159,6 @@ class PPO(AgentBase):
         ## optimizers
         self.actor_optimizer = torch.optim.Adam(self.actor_net.parameters(), self.configs.lr_actor)
         self.critic_optimizer = torch.optim.Adam(self.critic_net.parameters(), self.configs.lr_critic)
-        if self.configs.lr_decay:
-            self.actor_lr_scheduler = torch.optim.lr_scheduler.LinearLR(
-                self.actor_optimizer, 
-                start_factor=self.configs.lr_actor, 
-                end_factor=self.configs.lr_actor_final,
-                total_iters=self.configs.total_iter
-            )
-            self.critic_lr_scheduler = torch.optim.lr_scheduler.LinearLR(
-                self.critic_optimizer, 
-                start_factor=self.configs.lr_critic, 
-                end_factor=self.configs.lr_critic_final,
-                total_iters=self.configs.total_iter
-            )
 
         ## buffer
         self.buffer = ReplayBuffer(
@@ -213,17 +184,8 @@ class PPO(AgentBase):
         next_state = torch.FloatTensor(batches["next_state"]).to(device)
         old_log_prob = torch.FloatTensor(batches["log_prob"]).to(device)
 
-        if self.configs.reward_process is None:
-            pass
-        elif self.configs.reward_process == "normalization":
+        if not self.configs.advantage_norm:
             reward = (reward - reward.mean()) / (reward.std() + 1e-10)
-        elif self.configs.reward_process == "scaling":
-            reward = None
-        elif self.configs.reward_process == "clipping":
-            reward = torch.clamp(
-                reward, -self.configs.reward_clip_range, self.configs.reward_clip_range
-            )
-
         # generalized advantage estimation
         gae = 0
         advantage = []
@@ -238,28 +200,34 @@ class PPO(AgentBase):
             advantage.reverse()
             advantage = torch.FloatTensor(np.array(advantage)).to(device)
 
+        v_target = advantage + value
+
         if self.configs.advantage_norm:
             advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-10)
 
-        v_target = advantage + value
-
         for _ in range(self.configs.epoch):
-            for indices in BatchSampler(SubsetRandomSampler(range(self.configs.horizon-1)), self.configs.batch_size, True):
+            for indices in BatchSampler(
+                SubsetRandomSampler(range(self.configs.horizon-1)), 
+                self.configs.batch_size, True
+            ):
                 if self.configs.discrete:
-                    probs, _ = self.forward(state)
+                    probs = self.actor_net(state)
                     probs = self.softmax(probs)
                     dist = Categorical(probs)
                 else:
-                    mean, log_std = self.actor_net(state[indices])
-                    std = torch.exp(log_std)
-                    dist = Normal(mean, std)
+                    dist = self.actor_net.get_norm_dist(state[indices])
                 log_prob = dist.log_prob(action[indices])
-                ratio = torch.exp(log_prob - old_log_prob[indices])
+                ratio = torch.exp(log_prob.sum(1, keepdim=True) - old_log_prob[indices].sum(1, keepdim=True))
 
                 loss_cpi = ratio * advantage[indices]
                 loss_clip = torch.clamp(ratio, 1-self.configs.clip_epsilon, 1+self.configs.clip_epsilon) * advantage[indices]
 
-                actor_loss = - torch.min(loss_cpi, loss_clip).mean()
+                if self.configs.entropy_coef is None:
+                    actor_loss = - torch.min(loss_cpi, loss_clip).mean()
+                else:
+                    dist_entropy = dist.entropy().sum(1, keepdim=True)
+                    actor_loss = (- torch.min(loss_cpi, loss_clip) - self.configs.entropy_coef * dist_entropy).mean()
+
                 self.actor_optimizer.zero_grad()
                 actor_loss.backward()
                 if self.configs.gradient_clip:
@@ -272,10 +240,6 @@ class PPO(AgentBase):
                 if self.configs.gradient_clip:
                     nn.utils.clip_grad_norm_(self.critic_net.parameters(), self.configs.gradient_clip_range)
                 self.critic_optimizer.step()
-
-                if self.configs.lr_decay:
-                    self.actor_lr_scheduler().step()
-                    self.critic_lr_scheduler().step()
 
         self.buffer.clear()
 
