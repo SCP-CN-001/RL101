@@ -1,6 +1,16 @@
-# RL101
+Language: 中文 | [English](./README.en.md)
 
-一份面向实验室内部的RL教程，主要结构如下：
+# 强化学习导论
+
+## 前言
+
+在自动驾驶的决策、规划、控制领域，相比起仅由知识驱动、基于人为编写的规则判断的方法，由数据驱动、自主生成策略依据的方法（强化学习，模仿学习）具有更强的灵活性，有潜力在超出假设范围的场景中，探索到可行解。在算法选择得当的情况下，基于数据驱动的决策/规控方法将具有很强的鲁棒性和泛化性，能够运用到多样化的驾驶场景中，成为L3/L4级别自动驾驶系统的行动指示中枢。因此，在实验室内分享数据驱动类决策生成方法的知识，关于让同学们对其形成基本认知是有必要的。
+
+## 快速开始
+
+### 文件结构
+
+本仓库的路径结构如下：
 
 ```shell
 .
@@ -18,7 +28,7 @@
 └── tutorials
 ```
 
-## 环境配置
+### 环境配置
 
 推荐系统：Ubuntu 18.04/20.04
 
@@ -38,7 +48,7 @@ cd ~/.mujoco
 # 如果想要更新的版本请自己上https://github.com/deepmind/mujoco 下载
 wget https://github.com/deepmind/mujoco/releases/download/2.3.0/mujoco-2.3.0-linux-x86_64.tar.gz
 tar -zxvf mujoco-2.3.0-linux-x86_64.tar.gz -C ./mujoco230
-# 需要将环境配置写到`~/.bashrc`或者其他常用的终端配置文件中，注意修改$USER_NAME为具体用户名
+# 需要将环境配置写到`~/.bashrc`或者其他常用的终端配置文件中
 echo "export LD_LIBRARY_PATH=~/.mujoco/mujoco210/bin${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> ~/.bashrc
 source ~/.bashrc
 ```
@@ -59,3 +69,13 @@ conda activate rllib
 ```shell
 tensorboard --logdir ./demo_rl/logs
 ```
+
+## 参考资料
+
+### 书本
+
+Sutton, Richard S., and Andrew G. Barto. *Reinforcement learning: An introduction*. MIT press, 2018.
+
+### 论文
+
+### 博客与网站
