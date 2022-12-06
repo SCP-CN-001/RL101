@@ -4,6 +4,12 @@ Language: [中文](./README.md) | English
 
 ## Prologue
 
+## About
+
+### Motivation
+
+### Features
+
 ## Quick Start
 
 ### Folder Structure

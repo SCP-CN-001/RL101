@@ -6,6 +6,12 @@ Language: 中文 | [English](./README.en.md)
 
 在自动驾驶的决策、规划、控制领域，相比起仅由知识驱动、基于人为编写的规则判断的方法，由数据驱动、自主生成策略依据的方法（强化学习，模仿学习）具有更强的灵活性，有潜力在超出假设范围的场景中，探索到可行解。在算法选择得当的情况下，基于数据驱动的决策/规控方法将具有很强的鲁棒性和泛化性，能够运用到多样化的驾驶场景中，成为L3/L4级别自动驾驶系统的行动指示中枢。因此，在实验室内分享数据驱动类决策生成方法的知识，关于让同学们对其形成基本认知是有必要的。
 
+## 关于
+
+### 动机
+
+### 特色
+
 ## 快速开始
 
 ### 文件结构
@@ -74,8 +80,14 @@ tensorboard --logdir ./demo_rl/logs
 
 ### 书本
 
-Sutton, Richard S., and Andrew G. Barto. *Reinforcement learning: An introduction*. MIT press, 2018.
+[1] 强化学习导论：Sutton, Richard S., and Andrew G. Barto. *Reinforcement learning: An introduction*. MIT press, 2018.
 
 ### 论文
+
+[1] Q-learning: Watkins, Christopher JCH, and Peter Dayan. "Q-learning." *Machine learning* 8.3 (1992): 279-292.
+
+[2] DQN论文初稿：Mnih, Volodymyr, et al. "Playing atari with deep reinforcement learning." *arXiv preprint arXiv:1312.5602* (2013).
+
+[3] DQN最终版本：Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." *nature* 518.7540 (2015): 529-533.
 
 ### 博客与网站
