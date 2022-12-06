@@ -41,37 +41,38 @@ def process_atari(state):
 
 
 def train(
-    env: gym.Env, agent:DQN, num_episode: int, update_freq: int,
+    env: gym.Env, agent:DQN, num_episode: int,
     env_name: str, writer: SummaryWriter, preprocess_state = None
 ):
-    counter = 0
+    scores = []
+    scores_norm = []
 
     for episode in range(num_episode):
         score = 0
+        score_norm = 0
         state = env.reset()
-        is_done = False
-        while not is_done:
+        done = False
+
+        while not done:
             if preprocess_state is not None:
                 state = preprocess_state(state)
             action = agent.get_action(state)
             next_state, reward, done, _ = env.step(action)
-            reward = np.clip(reward, -1, 1)
-            is_done = done
+            reward_norm = np.clip(reward, -1, 1)
             done_mask = 0.0 if done else 1.0
             agent.buffer.push((state, [action], reward, done_mask))
-
             state = next_state
             score += reward
-            counter += 1
-            if done:
-                break
-        if counter > update_freq:
-            agent.train()
-            counter = 0
+            score_norm += reward_norm
+
+        agent.train()
+        scores.append(score)
+        scores_norm.append(score_norm)
 
         print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
         name = env_name.split("/")[-1]
-        writer.add_scalar("%s_average_return" % name, score, episode)
+        writer.add_scalar("%s_average_return" % name, np.mean(scores), episode)
+        writer.add_scalar("%s_average_return (normalized)" % name, np.mean(scores_norm), episode)
 
     env.close()
 
@@ -82,12 +83,11 @@ def DQN_atari(env_name):
 
     # Params
     num_episode = 300
-    update_freq = 1e3
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
-        "replay_start_size": 5e3,
-        "buffer_size": int(1e5),
+        "replay_start_size": 5e4,
+        "buffer_size": int(1e6),
         "target_update_freq": 1,
     }
 
@@ -96,11 +96,11 @@ def DQN_atari(env_name):
 
     # Generate tensorboard writer
     writer = tensorboard_writer(env_name)
-    train(env, agent, num_episode, update_freq, env_name, writer, process_atari)
+    train(env, agent, num_episode, env_name, writer, process_atari)
 
 
 if __name__ == '__main__':
     # DQN_atari("ALE/BankHeist-v5") # far below human's performance
-    # DQN_atari("ALE/VideoPinball-v5") # much better than human's performance
+    DQN_atari("ALE/VideoPinball-v5") # much better than human's performance
     # DQN_atari("ALE/Freeway-v5") # close to human's performance
-    DQN_atari("ALE/SpaceInvaders-v5") # better than human's performance
+    # DQN_atari("ALE/SpaceInvaders-v5") # better than human's performance

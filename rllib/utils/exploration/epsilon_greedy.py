@@ -4,18 +4,33 @@ import math
 from rllib.algorithms.base.config import ConfigBase
 
 
-def epsilon_greedy(action, num_step: int, configs: ConfigBase):
-    if configs.reduce_epsilon:
-        # skip exploration if the maximum exploration step is reached
-        if num_step > configs.maximum_exploration_step:
-            return action
-        # reduce epsilon
+class EpsilonGreedy(object):
+    def __init__(
+        self, epsilon: float = 0.1, reduce_epsilon: bool = True, 
+        initial_epsilon: float = 1, final_epsilon: float = 0.1, step_decay: int = int(1e7)
+    ):
+        self.reduce_epsilon = reduce_epsilon
+        if self.reduce_epsilon:
+            self.initial_epsilon = initial_epsilon
+            self.final_epsilon = final_epsilon
+            self.step_cnt = 0
+            self.step_decay = step_decay
         else:
-            epsilon_threshold = configs.final_epsilon + \
-                (configs.initial_epsilon-configs.final_epsilon) \
-                    * math.exp(- num_step * configs.decay_rate)
-    else:
-        epsilon_threshold = 1 - configs.epsilon
-    if random.random() < epsilon_threshold:
-        return configs.action_space.sample()
-    return action
+            self.epsilon = epsilon
+
+    def update_epsilon(self):
+        epsilon = self.initial_epsilon + \
+            self.step_cnt / self.step_decay * (self.final_epsilon - self.initial_epsilon)
+        return epsilon
+
+    def explore(self, action, action_space):
+        if self.reduce_epsilon:
+            if self.step_cnt < self.step_decay:
+                threshold = self.update_epsilon()
+            else:
+                threshold = self.final_epsilon
+        else:
+            threshold = self.epsilon
+        if random.random() < threshold:
+            return action_space.sample()
+        return action

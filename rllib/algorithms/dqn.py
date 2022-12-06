@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from rllib.algorithms.base.config import ConfigBase
 from rllib.algorithms.base.agent import AgentBase
 from rllib.utils.replay_buffer.replay_buffer import ReplayBuffer
-from rllib.utils.exploration.epsilon_greedy import epsilon_greedy
+from rllib.utils.exploration.epsilon_greedy import EpsilonGreedy
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -62,14 +62,10 @@ class DQNConfig(ConfigBase):
 
         # model
         ## hyper-parameters
-        self.reduce_epsilon: bool = True
-        self.initial_epsilon: float = 1.
-        self.final_epsilon: float = 0.1
-        self.epsilon = 0.9
-        self.maximum_exploration_step: int = int(10e7)
-        self.decay_rate = 1e-3
+        self.explore = True
+        self.explore_func = EpsilonGreedy()
         self.replay_start_size = 5e4
-        self.buffer_size: int = int(1e7)
+        self.buffer_size: int = int(1e6)
 
         ## networks
         self.lr = 2.5e-4
@@ -89,13 +85,10 @@ class DQN(AgentBase):
     def __init__(self, configs: dict):
         super().__init__(DQNConfig, configs)
 
-        self.learn_step_counter = 0
-        if self.configs.reduce_epsilon:
-            self.action_step_counter = 0
-
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
         self.target_net = deepcopy(self.policy_net)
+        self.learn_step_counter = 0
 
         # optimizer
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), self.configs.lr)
@@ -103,22 +96,24 @@ class DQN(AgentBase):
         # the replay buffer
         self.buffer = ReplayBuffer(self.configs.buffer_size)
 
+        # exploration method
+        if self.configs.explore:
+            self.explore_func = self.configs.explore_func
+
     def get_action(self, state):
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).to(device)
+
         state = state.unsqueeze(0)
         action = self.policy_net.action(state)
-        action = epsilon_greedy(action,  self.action_step_counter, self.configs)
-        if self.configs.reduce_epsilon:
-            self.action_step_counter += 1
+        if self.configs.explore:
+            action = self.explore_func.explore(action, self.configs.action_space)
         
         return action
     
     def train(self):
         if len(self.buffer) < self.configs.replay_start_size:
             return
-        
-        self.learn_step_counter += 1
         
         batches = self.buffer.sample(self.configs.batch_size)
         state = torch.FloatTensor(batches["state"]).to(device)
@@ -139,5 +134,6 @@ class DQN(AgentBase):
         self.optimizer.step()
 
         # update target net
+        self.learn_step_counter += 1
         if self.learn_step_counter % self.configs.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
