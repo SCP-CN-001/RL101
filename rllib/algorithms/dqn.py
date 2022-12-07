@@ -88,7 +88,7 @@ class DQN(AgentBase):
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
         self.target_net = deepcopy(self.policy_net)
-        self.learn_step_counter = 0
+        self.learn_step_cnt = 0
 
         # optimizer
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), self.configs.lr)
@@ -134,6 +134,6 @@ class DQN(AgentBase):
         self.optimizer.step()
 
         # update target net
-        self.learn_step_counter += 1
-        if self.learn_step_counter % self.configs.target_update_freq == 0:
+        self.learn_step_cnt += 1
+        if self.learn_step_cnt % self.configs.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())

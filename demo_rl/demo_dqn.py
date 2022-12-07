@@ -41,19 +41,25 @@ def process_atari(state):
 
 
 def train(
-    env: gym.Env, agent:DQN, num_episode: int,
+    env: gym.Env, agent:DQN, num_epoch: int,
     env_name: str, writer: SummaryWriter, preprocess_state = None
 ):
+
     scores = []
     scores_norm = []
+    episode_cnt = 0
+    step_cnt = 0
+    name = env_name.split("/")[-1]
+    train = True
 
-    for episode in range(num_episode):
+    while train:
         score = 0
         score_norm = 0
         state = env.reset()
         done = False
 
         while not done:
+            step_cnt += 1
             if preprocess_state is not None:
                 state = preprocess_state(state)
             action = agent.get_action(state)
@@ -64,15 +70,19 @@ def train(
             state = next_state
             score += reward
             score_norm += reward_norm
-
-        agent.train()
+            if step_cnt % 16 == 0:
+                agent.train()
+                if agent.learn_step_cnt % 50000 == 0:
+                    epoch = agent.learn_step_cnt // 50000
+                    writer.add_scalar("%s_average_return" % name, np.mean(scores), epoch)
+                    writer.add_scalar("%s_average_return (normalized)" % name, np.mean(scores_norm), epoch)
+                    if epoch == num_epoch:
+                        train = False
+        
         scores.append(score)
         scores_norm.append(score_norm)
-
-        print("episode:{}, Return:{}, buffer_capacity:{}".format(episode, score, len(agent.buffer)))
-        name = env_name.split("/")[-1]
-        writer.add_scalar("%s_average_return" % name, np.mean(scores), episode)
-        writer.add_scalar("%s_average_return (normalized)" % name, np.mean(scores_norm), episode)
+        episode_cnt += 1
+        print("episode:{}, Return:{}, buffer_capacity:{}".format(episode_cnt, score, len(agent.buffer)))
 
     env.close()
 
@@ -87,7 +97,7 @@ def DQN_atari(env_name):
         "state_space": env.observation_space,
         "action_space": env.action_space,
         "replay_start_size": 5e4,
-        "buffer_size": int(1e6),
+        "buffer_size": int(1e5),
         "target_update_freq": 1,
     }
 
@@ -101,6 +111,6 @@ def DQN_atari(env_name):
 
 if __name__ == '__main__':
     # DQN_atari("ALE/BankHeist-v5") # far below human's performance
-    DQN_atari("ALE/VideoPinball-v5") # much better than human's performance
+    # DQN_atari("VideoPinball-v4") # much better than human's performance
     # DQN_atari("ALE/Freeway-v5") # close to human's performance
-    # DQN_atari("ALE/SpaceInvaders-v5") # better than human's performance
+    DQN_atari("SpaceInvaders-v4") # better than human's performance
