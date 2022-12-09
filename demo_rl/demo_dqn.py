@@ -38,7 +38,7 @@ def process_atari(state):
     gray_array = np.expand_dims(np.array(gray), axis=2)
     processed_state = np.concatenate((im_array, gray_array), axis=2)
     processed_state = np.transpose(processed_state, (2, 0, 1))
-    # processed_state = processed_state / 255.
+    processed_state = processed_state / 255.
     return processed_state
 
 
