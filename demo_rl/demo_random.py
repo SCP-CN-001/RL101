@@ -5,9 +5,9 @@ import gym
 from torch.utils.tensorboard import SummaryWriter
 
 num_episode = 300
-# env_name = "VideoPinball-v4"
-# env_name = "SpaceInvaders-v4"
-env_name = "Pong-v4"
+# env_name = "VideoPinballNoFrameskip-v4"
+env_name = "SpaceInvadersNoFrameskip-v4"
+# env_name = "PongNoFrameskip-v4"
 current_time = time.localtime()
 timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
 
