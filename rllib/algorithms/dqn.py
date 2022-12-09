@@ -75,6 +75,10 @@ class DQNConfig(ConfigBase):
         }
         self.target_update_freq = 1e4
 
+        # tricks
+        self.gradient_clip = False
+        self.gradient_clip_range = 1
+
         self.merge_configs(configs)
 
 
@@ -131,6 +135,8 @@ class DQN(AgentBase):
         # optimization
         self.optimizer.zero_grad()
         loss.backward()
+        if self.configs.gradient_clip:
+            nn.utils.clip_grad_norm_(self.policy_net.parameters(), self.configs.gradient_clip_range)
         self.optimizer.step()
 
         # update target net
