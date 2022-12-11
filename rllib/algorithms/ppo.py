@@ -242,21 +242,3 @@ class PPO(AgentBase):
                 self.critic_optimizer.step()
 
         self.buffer.clear()
-
-    def save(self, checkpoint_dir: str, param_only: bool = True):
-        if param_only:
-            torch.save(self.actor_net.state_dict(), "%s/actor.pkl" % checkpoint_dir)
-            torch.save(self.critic_net.state_dict(), "%s/critic.pkl" % checkpoint_dir)
-        else:
-            torch.save(self.actor_net, "%s/actor.pkl" % checkpoint_dir)
-            torch.save(self.critic_net, "%s/critic.pkl" % checkpoint_dir)
-    
-    def load(self, checkpoint_dir: str, param_only: bool = True):
-        actor_checkpoint = torch.load("%s/actor.pkl" % checkpoint_dir)
-        critic_checkpoint = torch.load("%s/critic.pkl" % checkpoint_dir)
-        if param_only:
-            self.actor_net.load_state_dict(actor_checkpoint)
-            self.critic_net.load_state_dict(critic_checkpoint)
-        else:
-            self.actor_net = actor_checkpoint
-            self.critic_net = critic_checkpoint
