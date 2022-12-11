@@ -19,8 +19,9 @@ class EpsilonGreedy(object):
             self.epsilon = epsilon
 
     def update_epsilon(self):
-        epsilon = self.initial_epsilon + \
-            self.step_cnt / self.step_decay * (self.final_epsilon - self.initial_epsilon)
+        epsilon = self.final_epsilon + \
+            (self.initial_epsilon - self.final_epsilon) * math.exp(-1. * self.step_cnt / self.step_decay)
+        self.step_cnt += 1
         return epsilon
 
     def explore(self, action, action_space):

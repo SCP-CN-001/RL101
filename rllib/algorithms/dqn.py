@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -26,21 +24,21 @@ class QNetwork(nn.Module):
         )
 
         self.fc1 = nn.Linear(7*7*64, 512)
+        self.relu = nn.ReLU()
         self.fc2 = nn.Linear(512, num_actions)
     
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         x = self.net(state)
         x = x.view(x.size(0), -1)
-        x = self.fc1(x)
+        x = self.relu(self.fc1(x))
         x = self.fc2(x)
 
         return x
 
     def action(self, state: torch.Tensor) -> int:
         x = self.forward(state)
-        action = x.max(1)[1].view(1,1)
-        action = action.detach().cpu().numpy()[0][0]
-
+        action = x.argmax(1)[0]
+        action = action.detach().cpu().numpy()
         return action
 
 
@@ -69,6 +67,8 @@ class DQNConfig(ConfigBase):
 
         ## networks
         self.lr = 2.5e-4
+        self.alpha = 0.95
+        self.eps = 0.01
         self.q_net = QNetwork
         self.q_net_kwargs = {
             "num_actions": self.num_actions
@@ -84,6 +84,7 @@ class DQNConfig(ConfigBase):
 
 class DQN(AgentBase):
     """Deep Q-Networks (DQN)
+    
     An implementation of DQN based on the Nature released version of DQN paper 'Human-level control through deep reinforcement learning'
     """
     def __init__(self, configs: dict):
@@ -91,11 +92,15 @@ class DQN(AgentBase):
 
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
-        self.target_net = deepcopy(self.policy_net)
-        self.learn_step_cnt = 0
+        self.target_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.update_cnt = 0
 
         # optimizer
-        self.optimizer = torch.optim.Adam(self.policy_net.parameters(), self.configs.lr)
+        self.optimizer = torch.optim.RMSprop(
+            self.policy_net.parameters(), 
+            lr=self.configs.lr, alpha=self.configs.alpha, eps=self.configs.eps
+        )
 
         # the replay buffer
         self.buffer = ReplayBuffer(self.configs.buffer_size)
@@ -106,9 +111,8 @@ class DQN(AgentBase):
 
     def get_action(self, state):
         if not isinstance(state, torch.Tensor):
-            state = torch.FloatTensor(state).to(device)
+            state = torch.FloatTensor(state).unsqueeze(0).to(device)
 
-        state = state.unsqueeze(0)
         action = self.policy_net.action(state)
         if self.configs.explore:
             action = self.explore_func.explore(action, self.configs.action_space)
@@ -127,19 +131,20 @@ class DQN(AgentBase):
         done = torch.FloatTensor(batches["done"]).to(device)
 
         # loss function
-        q_value = self.policy_net(state).gather(1, action)
-        q_next = self.target_net(next_state).max(1)[0].detach()
-        q_target = (reward + q_next * self.configs.gamma * done).unsqueeze(-1)
-        loss = F.mse_loss(q_value, q_target)
+        q_value= self.policy_net(state)[range(state.shape[0]), action]
+        q_next = self.target_net(next_state).max(-1)[0]
+        q_target = reward + self.configs.gamma * done * q_next
+        loss = F.smooth_l1_loss(q_value, q_target)
 
         # optimization
         self.optimizer.zero_grad()
         loss.backward()
         if self.configs.gradient_clip:
-            nn.utils.clip_grad_norm_(self.policy_net.parameters(), self.configs.gradient_clip_range)
+            for param in self.policy_net.parameters():
+                param.grad.data.clamp_(-1, 1)
         self.optimizer.step()
 
         # update target net
-        self.learn_step_cnt += 1
-        if self.learn_step_cnt % self.configs.target_update_freq == 0:
+        self.update_cnt += 1
+        if self.update_cnt % self.configs.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
