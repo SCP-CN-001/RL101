@@ -1,8 +1,6 @@
 import random
 import math
 
-from rllib.algorithms.base.config import ConfigBase
-
 
 class EpsilonGreedy(object):
     def __init__(

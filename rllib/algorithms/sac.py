@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from rllib.algorithms.base.agent import AgentBase
 from rllib.algorithms.base.config import ConfigBase
-from rllib.utils.replay_buffer.replay_buffer import ReplayBuffer
+from rllib.replay_buffer.replay_buffer import ReplayBuffer
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

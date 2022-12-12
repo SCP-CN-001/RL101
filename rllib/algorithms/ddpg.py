@@ -7,8 +7,8 @@ import torch.nn.functional as F
 
 from rllib.algorithms.base.config import ConfigBase
 from rllib.algorithms.base.agent import AgentBase
-from rllib.utils.replay_buffer.replay_buffer import ReplayBuffer
-from rllib.utils.exploration.ornstein_uhlenbeck_noise import OrnsteinUhlenbeckNoise
+from rllib.replay_buffer.replay_buffer import ReplayBuffer
+from rllib.exploration.ornstein_uhlenbeck_noise import OrnsteinUhlenbeckNoise
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
