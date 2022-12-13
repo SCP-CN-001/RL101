@@ -155,24 +155,26 @@ class SAC(AgentBase):
 
         # networks
         ## actor net
-        self.policy_net = self.configs.actor_net(**self.configs.actor_kwargs).to(device)
+        self.actor_net = self.configs.actor_net(**self.configs.actor_kwargs).to(device)
 
         ## critic nets
-        self.q1_net = self.configs.critic_net(**self.configs.critic_kwargs).to(device)
-        self.q1_target_net = deepcopy(self.q1_net)
+        self.critic_net1 = self.configs.critic_net(**self.configs.critic_kwargs).to(device)
+        self.critic_target_net1 = deepcopy(self.critic_net1)
 
-        self.q2_net = self.configs.critic_net(**self.configs.critic_kwargs).to(device)
-        self.q2_target_net = deepcopy(self.q2_net)
+        self.critic_net2 = self.configs.critic_net(**self.configs.critic_kwargs).to(device)
+        self.critic_target_net2 = deepcopy(self.critic_net2)
 
         ## alpha
         self.log_alpha = torch.tensor(np.log(self.configs.initial_temperature)).to(device)
         self.log_alpha.requires_grad = True
 
         ## optimizers
-        self.q1_optimizer = torch.optim.Adam(self.q1_net.parameters(), self.configs.lr_critic)
-        self.q2_optimizer = torch.optim.Adam(self.q2_net.parameters(), self.configs.lr_critic)
-        self.policy_optimizer = torch.optim.Adam(self.policy_net.parameters(), self.configs.lr_actor
-        )
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor_net.parameters(), self.configs.lr_actor)
+        self.critic_optimizer1 = torch.optim.Adam(
+            self.critic_net1.parameters(), self.configs.lr_critic)
+        self.critic_optimizer2 = torch.optim.Adam(
+            self.critic_net2.parameters(), self.configs.lr_critic)
         self.log_alpha_optimizer = torch.optim.Adam([self.log_alpha], self.configs.lr_alpha)
         
         # the replay buffer
@@ -185,7 +187,7 @@ class SAC(AgentBase):
     def get_action(self, state):
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).to(device)
-        action = self.policy_net.action(state)
+        action = self.actor_net.action(state)
 
         return action
 
@@ -205,36 +207,36 @@ class SAC(AgentBase):
         done = torch.FloatTensor(batches["done"]).unsqueeze(-1).to(device)
 
         # soft Q loss
-        next_action, next_log_prob = self.policy_net.evaluate(next_state)
+        next_action, next_log_prob = self.actor_net.evaluate(next_state)
         next_log_prob = next_log_prob.sum(-1, keepdim=True)
-        q1_target = self.q1_target_net(next_state, next_action)
-        q2_target = self.q2_target_net(next_state, next_action)
+        q1_target = self.critic_target_net1(next_state, next_action)
+        q2_target = self.critic_target_net2(next_state, next_action)
         q_target = reward + done * self.configs.gamma * (torch.min(q1_target, q2_target) - self.alpha.detach() * next_log_prob)
 
-        current_q1 = self.q1_net(state, action)
-        current_q2 = self.q2_net(state, action)
+        current_q1 = self.critic_net1(state, action)
+        current_q2 = self.critic_net2(state, action)
         q1_loss = F.mse_loss(current_q1, q_target.detach())
         q2_loss = F.mse_loss(current_q2, q_target.detach())
 
         # update the critic networks
-        self.q1_optimizer.zero_grad()
+        self.critic_optimizer1.zero_grad()
         q1_loss.backward()
-        self.q1_optimizer.step()
-        self.q2_optimizer.zero_grad()
+        self.critic_optimizer1.step()
+        self.critic_optimizer2.zero_grad()
         q2_loss.backward()
-        self.q2_optimizer.step()
+        self.critic_optimizer2.step()
 
         # policy loss
-        action_, log_prob = self.policy_net.evaluate(state)
+        action_, log_prob = self.actor_net.evaluate(state)
         log_prob = log_prob.sum(-1, keepdim=True)
-        q1_value = self.q1_net(state, action_)
-        q2_value = self.q2_net(state, action_)
-        policy_loss = (self.alpha.detach() * log_prob - torch.min(q1_value, q2_value)).mean()
+        q1_value = self.critic_net1(state, action_)
+        q2_value = self.critic_net2(state, action_)
+        actor_loss = (self.alpha.detach() * log_prob - torch.min(q1_value, q2_value)).mean()
 
         # update the actor network
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
 
         # optimize alpha
         if self.configs.learn_temperature:
@@ -244,5 +246,5 @@ class SAC(AgentBase):
             self.log_alpha_optimizer.step()
 
         # soft update target networks
-        self.soft_update(self.q1_target_net, self.q1_net)
-        self.soft_update(self.q2_target_net, self.q2_net)
+        self.soft_update(self.critic_target_net1, self.critic_net1)
+        self.soft_update(self.critic_target_net2, self.critic_net2)
