@@ -271,3 +271,6 @@ class SAC(AgentBase):
         self.critic_optimizer2.load_state_dict(checkpoint["critic_optimizer2"])
         self.log_alpha = checkpoint["log_alpha"]
         self.log_alpha_optimizer.load_state_dict(checkpoint["log_alpha_optimizer"])
+
+        self.critic_target_net1 = deepcopy(self.critic_net1)
+        self.critic_target_net2 = deepcopy(self.critic_net2)

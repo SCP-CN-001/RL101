@@ -176,7 +176,6 @@ class DDPG(AgentBase):
 
         return action
 
-    
     def soft_update(self, target_net, current_net):
         for target, current in zip(target_net.parameters(), current_net.parameters()):
             target.data.copy_(current.data * self.configs.tau + target.data * (1. - self.configs.tau))
@@ -211,3 +210,21 @@ class DDPG(AgentBase):
         # soft update target networks
         self.soft_update(self.actor_target_net, self.actor_net)
         self.soft_update(self.critic_target_net, self.critic_net)
+
+    def save(self, path: str):
+        torch.save({
+            "actor_net": self.actor_net.state_dict(),
+            "actor_optimizer": self.actor_optimizer.state_dict(),
+            "critic_net": self.critic_net.state_dict(),
+            "critic_optimizer": self.critic_optimizer.state_dict(),
+        }, path)
+
+    def load(self, path: str):
+        checkpoint = torch.load(path)
+        self.actor_net.load_state_dict(checkpoint["actor_net"])
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        self.critic_net.load_state_dict(checkpoint["critic_net"])
+        self.critic_optimizer.load_state_dict(checkpoint["critic_optimizer"])
+        
+        self.actor_target_net = deepcopy(self.actor_net)
+        self.critic_target_net = deepcopy(self.critic_net)
