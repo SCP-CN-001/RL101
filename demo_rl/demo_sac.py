@@ -5,7 +5,7 @@ sys.path.append("..")
 import gym
 
 from rllib.algorithms.sac import SAC
-from demo_rl.mujoco_trainer import mujoco_trainer
+from demo_rl.trainer import mujoco_trainer
 from demo_rl.utils import writer_generator
 
 

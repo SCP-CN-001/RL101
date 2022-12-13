@@ -33,24 +33,38 @@ def mujoco_trainer(
             action_in =  action_processor.process(action)
             next_state, reward, done, _ = env.step(action_in)
             done_mask = 0.0 if done else 1.0
-            agent.buffer.push((state, action, reward, done_mask))
+            if hasattr(agent, "buffer"):
+                agent.buffer.push((state, action, reward, done_mask))
             state = next_state
             score += reward
             agent.train()
             
             step_cnt += 1
-            if step_cnt % 1000 == 0:
+            if step_cnt % 1000 == 0 and log_writer is not None:
                 if len(scores) == 0:
                     continue
                 average_return = np.mean(scores)
                 log_writer.record_scalar("%s_average_return" % env_name, average_return, step_cnt)
-                if step_cnt % 10000 == 0:
+                if step_cnt % 10000 == 0 and ckpt_writer is not None:
                     ckpt_writer.save(agent, int(average_return), step_cnt)
 
         scores.append(score)
         episode_cnt += 1
         if episode_cnt % 100 == 0:
-            print("Episode: %d, score: %f, buffer capacity: %d" \
-                % (episode_cnt, score, len(agent.buffer)))
+            if hasattr(agent, "buffer"):
+                print("Episode: %d, score: %f, buffer capacity: %d" \
+                    % (episode_cnt, score, len(agent.buffer)))
+            else:
+                print("Episode: %d, score: %f" \
+                    % (episode_cnt, score))
         
     env.close()
+
+
+def atari_trainer(
+    env: gym.Env, agent: AgentBase, n_step: int, env_name: str, 
+    log_writer = None, ckpt_writer = None
+):
+    scores = deque([], maxlen=100)
+    step_cnt = 0
+    episode_cnt = 0
