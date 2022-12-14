@@ -17,7 +17,7 @@ def mujoco_trainer(
 
     action_processor = ActionWrapper(env.action_space)
 
-    scores = deque([], maxlen=100)
+    scores = deque([], maxlen=10)
     step_cnt = 0
     episode_cnt = 0
 
@@ -40,17 +40,17 @@ def mujoco_trainer(
             agent.train()
             
             step_cnt += 1
-            if step_cnt % 1000 == 0 and log_writer is not None:
+            if step_cnt % 5000 == 0 and log_writer is not None:
                 if len(scores) == 0:
                     continue
                 average_return = np.mean(scores)
                 log_writer.record_scalar("%s_average_return" % env_name, average_return, step_cnt)
-                if step_cnt % 10000 == 0 and ckpt_writer is not None:
+                if ckpt_writer is not None:
                     ckpt_writer.save(agent, int(average_return), step_cnt)
 
         scores.append(score)
         episode_cnt += 1
-        if episode_cnt % 100 == 0:
+        if episode_cnt % 10 == 0:
             if hasattr(agent, "buffer"):
                 print("Episode: %d, score: %f, buffer capacity: %d" \
                     % (episode_cnt, score, len(agent.buffer)))
