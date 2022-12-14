@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -92,8 +94,7 @@ class DQN(AgentBase):
 
         # networks
         self.policy_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
-        self.target_net = self.configs.q_net(**self.configs.q_net_kwargs).to(device)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net = deepcopy(self.policy_net)
         self.update_cnt = 0
 
         # optimizer
@@ -148,3 +149,16 @@ class DQN(AgentBase):
         self.update_cnt += 1
         if self.update_cnt % self.configs.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
+
+    def save(self, path: str):
+        torch.save({
+            "policy_net": self.policy_net.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }, path)
+
+    def load(self, path: str):
+        checkpoint = torch.load(path)
+        self.policy_net.load_state_dict(checkpoint["policy_net"])
+        self.optimizer.load_state_dict(checkpoint["optimizer"])
+
+        self.target_net = deepcopy(self.policy_net)

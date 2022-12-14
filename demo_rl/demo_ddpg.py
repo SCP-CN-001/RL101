@@ -22,7 +22,7 @@ def DDPG_mujoco(env_name):
     agent = DDPG(configs)
     # Record training process
     log_writer, ckpt_writer = writer_generator("ddpg", env_name, "step")
-    mujoco_trainer(env, agent, n_step, env_name, log_writer, ckpt_writer)
+    mujoco_trainer(env, agent, n_step, log_writer=log_writer, ckpt_writer=ckpt_writer)
 
 
 if __name__ == '__main__':

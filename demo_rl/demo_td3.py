@@ -17,12 +17,13 @@ def TD3_mujoco(env_name):
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
+        "batch_size": 256
     }
     # Generate agent
     agent = TD3(configs)
     # Generate tensorboard writer
     log_writer, ckpt_writer = writer_generator("td3", env_name, "step")
-    mujoco_trainer(env, agent, n_step, env_name, log_writer, ckpt_writer)
+    mujoco_trainer(env, agent, n_step, log_writer=log_writer, ckpt_writer=ckpt_writer)
 
 
 if __name__ == '__main__':

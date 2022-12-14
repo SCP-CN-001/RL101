@@ -3,7 +3,6 @@ from copy import deepcopy
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.distributions import Normal
 import torch.nn.functional as F
 
 from rllib.algorithms.base.config import ConfigBase
@@ -79,8 +78,10 @@ class TD3Config(ConfigBase):
         self.batch_size = 100
         self.tau: float = 5e-3         # soft-update factors
         self.buffer_size: int = int(1e6)
-        self.noise_sigma = 0.1
-        self.noise_clip = 0.5
+        self.explore_noise_sigma = 0.1
+        self.explore_noise_clip = 0.2
+        self.tps_noise_sigma = 0.2
+        self.tps_noise_clip = 0.5
         self.target_update_freq = 2
 
         ## actor net
@@ -130,10 +131,20 @@ class TD3(AgentBase):
         # the replay buffer
         self.buffer = ReplayBuffer(self.configs.buffer_size)
 
+        # exploration
+        self.explore_noise_sigma = self.configs.explore_noise_sigma
+        self.explore_noise_clip = self.configs.explore_noise_clip
+
     def get_action(self, state):
         if not isinstance(state, torch.Tensor):
             state = torch.FloatTensor(state).to(device)
         action = self.actor_net.action(state)
+
+        # explore
+        noise = torch.randn_like(action) * self.explore_noise_sigma
+        noise = noise.clamp(-self.explore_noise_clip, self.explore_noise_clip)
+        action += noise
+        action = action.clamp(-1, 1)
         action = action.detach().cpu().numpy()
 
         return action
@@ -153,13 +164,13 @@ class TD3(AgentBase):
         next_state = torch.FloatTensor(batches["next_state"]).to(device)
         done = torch.FloatTensor(batches["done"]).unsqueeze(-1).to(device)
 
-        # critic loss
-        noise = (torch.randn_like(action) * self.configs.noise_sigma)
-        noise = noise.clamp(-self.configs.noise_clip, self.configs.noise_clip)
-        
-        next_action = (self.actor_target_net.action(next_state) + noise)
+        # target policy smoothing
+        noise = torch.randn_like(action) * self.configs.tps_noise_sigma
+        noise = noise.clamp(-self.configs.tps_noise_clip, self.configs.tps_noise_clip)
+        next_action = self.actor_target_net.action(next_state) + noise
         next_action = next_action.clamp(-1, 1)
 
+        # critic loss
         q1_target = self.critic_target_net1(next_state, next_action)
         q2_target = self.critic_target_net2(next_state, next_action)
         q_target = reward + done * self.configs.gamma * torch.min(q1_target, q2_target)
