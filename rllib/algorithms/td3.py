@@ -213,8 +213,8 @@ class TD3(AgentBase):
             "critic_optimizer2": self.critic_optimizer2.state_dict(),
         }, path)
 
-    def load(self, path: str):
-        checkpoint = torch.load(path)
+    def load(self, path: str, map_location = None):
+        checkpoint = torch.load(path, map_location=map_location)
         self.actor_net.load_state_dict(checkpoint["actor_net"])
         self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
         self.critic_net1.load_state_dict(checkpoint["critic_net1"])

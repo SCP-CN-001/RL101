@@ -13,7 +13,7 @@ from demo_rl.utils import ActionWrapper
 def mujoco_trainer(
     env: gym.Env, agent: AgentBase, 
     n_step: int = int(1e6), record_interval: int = 5000, print_interval: int = 10,
-    log_writer = None, ckpt_writer = None
+    log_writer = None, ckpt_writer = None, restart = False, restart_step = None
 ):
     env_name = env.unwrapped.spec.id
     action_processor = ActionWrapper(env.action_space)
@@ -21,6 +21,9 @@ def mujoco_trainer(
     scores = deque([], maxlen=10)
     step_cnt = 0
     episode_cnt = 0
+
+    if restart:
+        step_cnt = restart_step
 
     while step_cnt < n_step:
         score = 0
