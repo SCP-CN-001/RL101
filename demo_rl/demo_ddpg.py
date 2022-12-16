@@ -13,7 +13,7 @@ def DDPG_mujoco(env_name):
     # Generate environment
     env = gym.make(env_name)
     # Params
-    n_step = int(1e6)
+    n_step = int(3e6)
     configs = {
         "state_space": env.observation_space,
         "action_space": env.action_space,
@@ -28,6 +28,6 @@ def DDPG_mujoco(env_name):
 if __name__ == '__main__':
     env_name = "Hopper-v3"
     # env_name = "Walker2d-v3"
-    # env_name = "HalfCheetah-v2" # n_step=int(3e6)
-    # env_name = "Ant-v2" # n_step=int(3e6)
+    # env_name = "HalfCheetah-v2"
+    # env_name = "Ant-v2"
     DDPG_mujoco(env_name)
