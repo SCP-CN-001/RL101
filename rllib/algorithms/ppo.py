@@ -301,6 +301,3 @@ class PPO(AgentBase):
         self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
         self.critic_net.load_state_dict(checkpoint["critic_net"])
         self.critic_optimizer.load_state_dict(checkpoint["critic_optimizer"])
-        
-        self.actor_target_net = deepcopy(self.actor_net)
-        self.critic_target_net = deepcopy(self.critic_net)

@@ -2,8 +2,16 @@ name: rllib
 channels:
   - pytorch
   - nvidia
-  - anaconda
   - conda-forge
+  - anaconda
+  - https://mirrors.ustc.edu.cn/anaconda/cloud/menpo/
+  - https://mirrors.ustc.edu.cn/anaconda/cloud/bioconda/
+  - https://mirrors.ustc.edu.cn/anaconda/cloud/msys2/
+  - https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge/
+  - https://mirrors.ustc.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.ustc.edu.cn/anaconda/pkgs/free/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
   - defaults
 dependencies:
   - _libgcc_mutex=0.1=main
@@ -92,7 +100,6 @@ dependencies:
   - icu=58.2=he6710b0_3
   - idna=3.4=py38h06a4308_0
   - importlib-metadata=5.1.0=pyha770c72_0
-  - importlib_resources=5.2.0=pyhd3eb1b0_1
   - intel-openmp=2021.4.0=h06a4308_3561
   - ipykernel=6.9.1=py38h06a4308_0
   - ipython=8.4.0=py38h06a4308_0
@@ -254,6 +261,11 @@ dependencies:
     - ale-py==0.7.5
     - autorom==0.4.2
     - autorom-accept-rom-license==0.4.2
+    - cython==0.29.32
+    - fasteners==0.18
+    - glfw==2.5.5
+    - imageio==2.23.0
     - importlib-resources==5.10.1
+    - mujoco-py==2.1.2.14
     - opencv-python==4.6.0.66
 prefix: /home/rowena/miniconda3/envs/rllib
