@@ -25,7 +25,7 @@ Language: 中文 | [English](./README.en.md)
 │   │   # 实现的原始强化算法在不同环境下训练的average reward记录
 │   ├── logs
 │   │   # 训练好的模型参数
-│   └── models
+│   └── checkpoints
 │   # 经典算法的原始实现
 ├── rllib
 │   ├── algorithms
@@ -37,6 +37,8 @@ Language: 中文 | [English](./README.en.md)
 ### 环境配置
 
 推荐系统：Ubuntu 18.04/20.04
+
+硬件配置：
 
 ### 强化学习训练环境配置
 
@@ -84,10 +86,21 @@ tensorboard --logdir ./demo_rl/logs
 
 ### 论文
 
-[1] Q-learning: Watkins, Christopher JCH, and Peter Dayan. "Q-learning." *Machine learning* 8.3 (1992): 279-292.
+[1] Q-learning: Watkins, Christopher JCH, and Peter Dayan. "[Q-learning.](https://link.springer.com/article/10.1007/BF00992698)" *Machine learning* 8.3 (1992): 279-292.
 
-[2] DQN论文初稿：Mnih, Volodymyr, et al. "Playing atari with deep reinforcement learning." *arXiv preprint arXiv:1312.5602* (2013).
+[2] DQN论文初稿：Mnih, Volodymyr, et al. "[Playing atari with deep reinforcement learning.](https://arxiv.org/abs/1312.5602)" *arXiv preprint arXiv:1312.5602* (2013).
 
-[3] DQN最终版本：Mnih, Volodymyr, et al. "Human-level control through deep reinforcement learning." *nature* 518.7540 (2015): 529-533.
+[3] DQN最终版本：Mnih, Volodymyr, et al. "[Human-level control through deep reinforcement learning.](https://www.nature.com/articles/nature14236?wm=book_wap_0005)" *nature* 518.7540 (2015): 529-533.
+
+[4] Rainbow：Hessel, Matteo, et al. "[Rainbow: Combining improvements in deep reinforcement learning.](https://hpi.de/fileadmin/user_upload/fachgebiete/plattner/teaching/Dynamic_Pricing/Rainbow.pdf)" *Thirty-second AAAI conference on artificial intelligence*. 2018.
+
+[5] Atari环境预处理：Machado, Marlos C., et al. "[Revisiting the arcade learning environment: Evaluation protocols and open problems for general agents.](https://www.jair.org/index.php/jair/article/view/11182)" *Journal of Artificial Intelligence Research* 61 (2018): 523-562.
+
+[6] DDPG：Lillicrap, Timothy P., et al. "[Continuous control with deep reinforcement learning.](https://arxiv.org/abs/1509.02971)" *arXiv preprint arXiv:1509.02971* (2015).
+
+
 
 ### 博客与网站
+
+[Reinforcement Learning Coach](https://intellabs.github.io/coach/)
+
