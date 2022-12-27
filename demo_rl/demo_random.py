@@ -40,14 +40,15 @@ def random_atari(env_name, n_step):
 
 if __name__ == "__main__":
     # mujoco
-    random_mujoco("Hopper-v3", int(3e6))
+    # random_mujoco("Hopper-v3", int(3e6))
     # random_mujoco("Walker2d-v3", int(3e6))
     # random_mujoco("HalfCheetah-v2", int(3e6))
     # random_mujoco("Ant-v2", int(3e6))
 
     # atari
-    # random_atari("BreakoutNoFrameskip-v4", int(1e7))
-    # random_atari("FreewayNoFrameskip-v4")
-    # random_atari("PongNoFrameskip-v4", int(1e7))
+    # random_atari("BreakoutNoFrameskip-v4", int(5e7))
+    # random_atari("FreewayNoFrameskip-v4", int(5e7))
+    # random_atari("PongNoFrameskip-v4", int(2e7))
     # random_atari("SeaquestNoFrameskip-v4", int(5e7))
     # random_atari("SpaceInvadersNoFrameskip-v4", int(5e7))
+    random_atari("EnduroNoFrameskip-v4", int(1e7))
