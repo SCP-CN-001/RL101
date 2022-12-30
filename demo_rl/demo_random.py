@@ -51,3 +51,4 @@ if __name__ == "__main__":
     random_atari("PongNoFrameskip-v4", int(5e7))
     # random_atari("SeaquestNoFrameskip-v4", int(5e7))
     # random_atari("SpaceInvadersNoFrameskip-v4", int(5e7))
+    # random_atari("EnduroNoFrameskip-v4", int(1e7))
