@@ -12,7 +12,6 @@ sys.path.append(".")
 import time
 from collections import deque
 
-# import objgraph
 import numpy as np
 import gymnasium as gym
 from torch.utils.tensorboard import SummaryWriter
@@ -24,12 +23,14 @@ def trainer(
     env: gym.Env,
     agent: callable,  # AgentBase
     max_step: int,
+    debug: bool = False,
+    score_length: int = 100,
     record_log: bool = True,
     log_tag: str = "",
     record_ckpt: bool = True,
     record_interval: int = 1000,
 ):
-    scores = deque([], maxlen=100)
+    scores = deque([], maxlen=score_length)
     step_cnt = 0
     episode_cnt = 0
 
@@ -44,33 +45,42 @@ def trainer(
             f"../models/{agent.name}/{log_tag}/{timestamp}", agent.name, 10
         )
 
+    act_time = deque([], maxlen=score_length)
+    simulate_time = deque([], maxlen=score_length)
+    memorize_time = deque([], maxlen=score_length)
+    train_time = deque([], maxlen=score_length)
+
     while step_cnt < max_step:
         score = 0
         state, _ = env.reset()
         done = False
 
         while not done:
+            t1 = time.time()
             if agent.name == "PPO":
-                action, log_prob, value = agent.get_action(state)
+                action, log_prob, value = agent.get_action(np.array(state))
             else:
-                action = agent.get_action(state)
+                action = agent.get_action(np.array(state))
 
+            t2 = time.time()
             next_state, reward, terminated, truncated, _ = env.step(action)
+
+            reward = np.sign(reward) if "Atari" in log_tag else float(reward)
             done = int(terminated or truncated)
 
-            reward_mask = np.sign(reward) if "Atari" in log_tag else reward
-
+            t3 = time.time()
             if hasattr(agent, "buffer"):
                 if agent.name == "PPO":
-                    transition = (state, action, reward_mask, done, log_prob, value)
+                    transition = (state, action, next_state, reward, done, log_prob, value.item())
                 else:
-                    transition = (state, action, reward_mask, done)
+                    transition = (state, action, next_state, reward, done)
 
-                agent.buffer.push(transition, next_state)
+                agent.push(transition)
 
+            t4 = time.time()
+            agent.train()
             state = next_state
             score += reward
-            agent.train()
 
             step_cnt += 1
 
@@ -83,6 +93,16 @@ def trainer(
 
                 if record_log:
                     log_writer.add_scalar(log_tag, average_return, step_cnt)
+
+                if debug:
+                    act_time.append(t2 - t1)
+                    simulate_time.append(t3 - t2)
+                    memorize_time.append(t4 - t3)
+                    train_time.append(time.time() - t4)
+                    print("Average Action Time: %.4f" % np.mean(act_time))
+                    print("Average Simulate Time: %.4f" % np.mean(simulate_time))
+                    print("Average Memorize Time: %.4f" % np.mean(memorize_time))
+                    print("Average Train Time: %.4f" % np.mean(train_time))
 
                 if record_ckpt:
                     ckpt_writer.save(agent, int(average_return), step_cnt)
