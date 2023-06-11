@@ -12,6 +12,7 @@ sys.path.append("..")
 sys.path.append("../rllib")
 
 import argparse
+import json
 
 import numpy as np
 import gymnasium as gym
@@ -68,6 +69,9 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda:0")
     args = parser.parse_args()
 
+    with open("train.config", "r") as f:
+        config = json.load(f)
+
     if args.tag == "Atari":
         env_config = {
             "id": args.env + "NoFrameskip-v4",
@@ -79,17 +83,8 @@ if __name__ == "__main__":
         env = gym.wrappers.AtariPreprocessing(env, scale_obs=True)
         env = gym.wrappers.FrameStack(env, num_stack=4)
 
-        agent_config_dict = {"state_space": env.observation_space, "action_space": env.action_space}
-
     elif args.tag == "ClassicControl":
         env = gym.make(args.env)
-
-        agent_config_dict = {
-            "state_space": env.observation_space,
-            "action_space": env.action_space,
-            "batch_size": 128,
-            "lr": 1e-4,
-        }
 
     elif args.tag == "Mujoco":
         env = gym.make(args.env)
@@ -98,47 +93,38 @@ if __name__ == "__main__":
             env = gym.wrappers.NormalizeObservation(env)
             env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
 
-        agent_config_dict = {"state_space": env.observation_space, "action_space": env.action_space}
-
     else:
         raise NotImplementedError(f"Environment not found: {args.tag}")
+
+    agent_config_dict = {
+        "state_space": env.observation_space,
+        "action_space": env.action_space,
+        **config[args.tag]["common"],
+        **(config[args.tag][args.agent] if args.agent in config[args.tag] else {}),
+    }
 
     # make agent
     device = torch.device(args.device)
 
     if args.agent == "dqn":
         if args.tag == "ClassicControl":
-            agent_config_dict["explore_kwargs"] = {
-                "reduce_epsilon": True,
-                "initial_epsilon": 1,
-                "final_epsilon": 0.1,
-                "step_decay": int(5e3),
-            }
-            agent_config_dict["n_initial_exploration_steps"] = 1000
             agent_config_dict["q_net"] = LinearQNetwork
             agent_config_dict["q_net_kwargs"] = {
                 "in_dim": env.observation_space.shape[0],
                 "out_dim": env.action_space.n,
             }
-            agent_config_dict["target_update_freq"] = 500
-        elif args.tag == "Atari":
-            agent_config_dict["buffer_size"] = int(1e5)
 
         agent_config = dqn.DQNConfig(agent_config_dict)
         agent = dqn.DQN(agent_config, device=device)
 
     elif args.agent == "rainbow":
         if args.tag == "ClassicControl":
-            agent_config_dict["n_initial_exploration_steps"] = 1000
             agent_config_dict["q_net"] = LinearRainbowQNetwork
             agent_config_dict["q_net_kwargs"] = {
                 "in_dim": env.observation_space.shape[0],
                 "out_dim": env.action_space.n,
                 "n_atoms": 51,
             }
-            agent_config_dict["target_update_freq"] = 500
-        elif args.tag == "Atari":
-            agent_config_dict["buffer_size"] = int(1e5)
 
         agent_config = rainbow.RainbowConfig(agent_config_dict)
         agent = rainbow.Rainbow(agent_config, device=device)
@@ -156,10 +142,9 @@ if __name__ == "__main__":
         agent = sac.SAC(agent_config, device=device)
 
     elif args.agent == "ppo":
-        if args.tag == "Atari":
-            agent_config_dict["continuous"] = False
-        elif args.tag == "ClassicControl":
-            agent_config_dict["continuous"] = False
+        if args.tag == "ClassicControl":
+            if args.env in ["Acrobot-v1", "CartPole-v1", "MountainCar-v0"]:
+                agent_config_dict["continuous"] = False
 
         agent_config = ppo.PPOConfig(agent_config_dict)
         agent = ppo.PPO(agent_config, device=device)

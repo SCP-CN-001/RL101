@@ -31,6 +31,12 @@ def trainer(
     record_interval: int = 1000,
 ):
     scores = deque([], maxlen=score_length)
+    # losses = deque([], maxlen=score_length)
+    if debug:
+        act_time = deque([], maxlen=score_length)
+        simulate_time = deque([], maxlen=score_length)
+        memorize_time = deque([], maxlen=score_length)
+        train_time = deque([], maxlen=score_length)
     step_cnt = 0
     episode_cnt = 0
 
@@ -44,11 +50,6 @@ def trainer(
         ckpt_writer = CheckpointWriter(
             f"../models/{agent.name}/{log_tag}/{timestamp}", agent.name, 10
         )
-
-    act_time = deque([], maxlen=score_length)
-    simulate_time = deque([], maxlen=score_length)
-    memorize_time = deque([], maxlen=score_length)
-    train_time = deque([], maxlen=score_length)
 
     while step_cnt < max_step:
         score = 0
@@ -79,10 +80,13 @@ def trainer(
 
             t4 = time.time()
             agent.train()
+            # loss = agent.train()
             state = next_state
             score += reward
 
             step_cnt += 1
+            # if loss is not None:
+            #     losses.append(loss.cpu().detach().numpy())
 
             if len(scores) > 0 and step_cnt % record_interval == 0:
                 average_return = np.mean(scores)
@@ -93,6 +97,9 @@ def trainer(
 
                 if record_log:
                     log_writer.add_scalar(log_tag, average_return, step_cnt)
+                    # if len(losses) > 0:
+                    #     average_loss = np.mean(losses)
+                    #     log_writer.add_scalar(log_tag + "/loss", average_loss, step_cnt)
 
                 if debug:
                     act_time.append(t2 - t1)
