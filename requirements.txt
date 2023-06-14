@@ -1,4 +1,8 @@
 gymnasium==0.28.1
+gymnasium[atari]
+gymnasium[accept-rom-license]
+gymnasium[box2d]
+gymnasium[other]
 numpy==1.24.3
 tensorboard==2.13.0
 torch==2.0.1
