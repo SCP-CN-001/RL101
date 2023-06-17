@@ -18,6 +18,7 @@ from rllib.algorithms import ppo
 
 device = torch.device("cuda:2")
 
+
 class CheckpointWriter:
     def __init__(self, path: str, prefix: str, num_ckpt: int = 10):
         self.path = path
@@ -42,7 +43,6 @@ class CheckpointWriter:
                 agent.save(save_path)
                 remove_path = "%s/%s_%d.pt" % (self.path, self.prefix, remove_idx[1])
                 os.remove(remove_path)
-
 
 
 class PPOAtariActor(nn.Module):
@@ -118,6 +118,67 @@ class PPOAtariCritic(nn.Module):
         return x
 
 
+class AtariSyncVectorEnv:
+    def __init__(self, id: str, num_envs: int):
+        self.envs = []
+        self.num_envs = num_envs
+
+        env_config = {
+            "id": id + "NoFrameskip-v4",
+            "obs_type": "rgb",
+            "full_action_space": True,
+            "render_mode": "rgb_array",
+        }
+
+        for _ in range(num_envs):
+            env = gym.make(**env_config)
+            env = gym.wrappers.AtariPreprocessing(env, scale_obs=True)
+            env = gym.wrappers.FrameStack(env, num_stack=4)
+            self.envs.append(env)
+
+    @property
+    def single_observation_space(self):
+        return self.envs[0].observation_space
+
+    @property
+    def single_action_space(self):
+        return self.envs[0].action_space
+
+    def reset(self):
+        state = []
+        info = []
+        for env in self.envs:
+            _state, _info = env.reset()
+            state.append(_state)
+            info.append(_info)
+
+        return np.array(state), np.array(info)
+
+    def step(self, actions):
+        next_state, reward, terminated, truncated = [], [], [], []
+        info = {
+            "_final_observation": [False] * self.num_envs,
+            "final_observation": [None] * self.num_envs,
+        }
+        for i in range(self.num_envs):
+            _next_state, _reward, _terminated, _truncated, _ = self.envs[i].step(actions[i][0])
+            if _terminated or _truncated:
+                info["_final_observation"][i] = True
+                info["final_observation"][i] = _next_state
+                _next_state, _ = self.envs[i].reset()
+
+            next_state.append(_next_state)
+            reward.append(_reward)
+            terminated.append(_terminated)
+            truncated.append(_truncated)
+
+        return next_state, reward, terminated, truncated, info
+
+    def close(self):
+        for env in self.envs:
+            env.close()
+
+
 def make_atari_env(id: str):
     env_config = {
         "id": id + "NoFrameskip-v4",
@@ -125,6 +186,7 @@ def make_atari_env(id: str):
         "full_action_space": True,
         "render_mode": "rgb_array",
     }
+
     env = gym.make(**env_config)
     env = gym.wrappers.AtariPreprocessing(env, scale_obs=True)
     env = gym.wrappers.FrameStack(env, num_stack=4)
@@ -132,14 +194,27 @@ def make_atari_env(id: str):
 
 
 if __name__ == "__main__":
-    env_name = "CartPole-v1"
+    # tag = "ClassicControl"
+    # env_name = "CartPole-v1"
     # env_name = "Acrobot-v1"
-    num_envs = 3
-    num_iterations = 100000
+    # env_name = "MountainCarContinuous-v0"
+    tag = "Atari"
+    env_name = "Pong"
+    # env_name = "Breakout"
+    # env_name = "Freeway"
+    num_envs = 8
+    max_step = 10000000
 
-    envs = gym.vector.make(env_name, num_envs=num_envs, asynchronous=True)
+    if tag == "Atari":
+        envs = AtariSyncVectorEnv(env_name, num_envs)
+        # envs = gym.vector.AsyncVectorEnv(
+        #     [lambda: make_atari_env(env_name)] * num_envs
+        # )
+    else:
+        envs = gym.vector.make(env_name, num_envs=num_envs, asynchronous=True)
+
     states, info = envs.reset()
-    scores = deque(maxlen=10)
+    scores = deque(maxlen=100)
     score_cache = [0] * num_envs
 
     current_time = time.localtime()
@@ -155,22 +230,50 @@ if __name__ == "__main__":
             "horizon": 64,
             "batch_size": 32,
             "clip_epsilon": 0.1,
+            "vf_coef": 0.1,
             "norm_advantage": False,
             "clip_grad_norm": False,
-            "vf_coef": 0.1,
         }
     )
 
-    agent = ppo.PPO(agent_configs_classic_control, device)
-
-    log_tag = f"ClassicControl/{env_name}"
-    log_writer = SummaryWriter(f"../logs/{agent.name}/{log_tag}/{timestamp}")
-    ckpt_writer = CheckpointWriter(
-        f"../models/{agent.name}/{log_tag}/{timestamp}", agent.name, 10
+    agent_config_atari = ppo.PPOConfig(
+        {
+            "state_space": envs.single_observation_space,
+            "action_space": envs.single_action_space,
+            "continuous": False,
+            "num_envs": num_envs,
+            "num_epochs": 3,
+            "horizon": 128,
+            "batch_size": 32,
+            "clip_epsilon": 0.1,
+            "lr_actor": 2.5e-4,
+            "actor_net": PPOAtariActor,
+            "actor_kwargs": {"num_channels": 4, "action_dim": envs.single_action_space.n},
+            "lr_critic": 2.5e-4,
+            "critic_net": PPOAtariCritic,
+            "critic_kwargs": {"num_channels": 4},
+            "vf_coef": 1.0,
+            "entropy_coef": 0.01,
+            "norm_advantage": False,
+            "clip_grad_norm": False,
+        }
     )
 
-    for step in range(num_iterations):
+    if tag == "Atari":
+        agent = ppo.PPO(agent_config_atari, device)
+    elif tag == "ClassicControl":
+        agent = ppo.PPO(agent_configs_classic_control, device)
+
+    log_tag = f"{tag}/{env_name}"
+    log_writer = SummaryWriter(f"../logs/{agent.name}/{log_tag}/{timestamp}")
+    ckpt_writer = CheckpointWriter(f"../models/{agent.name}/{log_tag}/{timestamp}", agent.name, 10)
+
+    for step in range(max_step):
         actions, log_probs, values = agent.get_action(states)
+        if tag == "Atari":
+            actions = [action[0] for action in actions]
+            values = [value.squeeze(0) for value in values]
+
         observations = envs.step(actions)
         transitions = (observations, states, actions, log_probs, values)
         agent.push(transitions)
@@ -186,11 +289,10 @@ if __name__ == "__main__":
                 scores.append(score_cache[i])
                 score_cache[i] = 0
 
-        if step > 0 and step % 200 == 0 and len(scores) > 0:
+        if step > 0 and step % 1000 == 0 and len(scores) > 0:
             average_return = np.mean(scores)
-            log_writer.add_scalar(f"ClassicControl/{env_name}", average_return, step * 3)
-            ckpt_writer.save(agent, average_return, step * 3)
+            log_writer.add_scalar(f"{tag}/{env_name}", average_return, step)
+            ckpt_writer.save(agent, average_return, step)
             print(f"Step: {step}, Score: {average_return}")
-            
 
     envs.close()
