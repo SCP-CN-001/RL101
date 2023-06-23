@@ -36,7 +36,14 @@ class LinearQNetwork(dqn.QNetwork):
 class LinearRainbowQNetwork(rainbow.RainbowQNetwork):
     """The Q-network for classic control tasks."""
 
-    def __init__(self, in_dim: int, out_dim: int, support: torch.Tensor, hidden_size: int = 128,  n_atoms: int = 51):
+    def __init__(
+        self,
+        in_dim: int,
+        out_dim: int,
+        support: torch.Tensor,
+        hidden_size: int = 128,
+        n_atoms: int = 51,
+    ):
         """Initialization."""
         super().__init__(in_dim, out_dim, n_atoms, support)
 

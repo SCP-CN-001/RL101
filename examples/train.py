@@ -49,8 +49,8 @@ def ppo_wrapper(env_id: str) -> gym.Env:
 
 
 def trainer(
-    envs,                   # VectorEnv
-    agent: callable,    # AgentBase
+    envs,  # VectorEnv
+    agent: callable,  # AgentBase
     max_step: int,
     debug: bool = False,
     score_length: int = 100,
@@ -86,7 +86,13 @@ def trainer(
                 actions, log_probs, values = agent.get_action(np.array(states))
                 next_states, rewards, terminated, truncated, info = envs.step(actions)
                 reward_mask = np.sign(rewards) if "Atari" in log_tag else rewards
-                transition = ((next_states, rewards, terminated, truncated, info), states, actions, log_probs, values)
+                transition = (
+                    (next_states, reward_mask, terminated, truncated, info),
+                    states,
+                    actions,
+                    log_probs,
+                    values,
+                )
             else:
                 action = agent.get_action(np.array(states[0]))
                 next_states, rewards, terminated, truncated, info = envs.step([action])
@@ -106,6 +112,7 @@ def trainer(
                 score_cache[i] += rewards[i]
                 if terminated[i] or truncated[i]:
                     scores.append(score_cache[i])
+                    episode_cnt += 1
                     score_cache[i] = 0
 
             step_cnt += 1
@@ -114,10 +121,16 @@ def trainer(
 
             if len(scores) > 0 and step_cnt % record_interval == 0:
                 average_return = np.mean(scores)
-                print(
-                    "Current Episode: %d, Total Step: %d, Average Return: %.2f"
-                    % (episode_cnt, step_cnt, average_return)
-                )
+                if debug:
+                    print(
+                        "Current Episode: %d, Total Step: %d, Average Return: %.2f, Average Loss: %.2f"
+                        % (episode_cnt, step_cnt, average_return, np.mean(losses))
+                    )
+                else:
+                    print(
+                        "Current Episode: %d, Total Step: %d, Average Return: %.2f"
+                        % (episode_cnt, step_cnt, average_return)
+                    )
 
                 if record_log:
                     log_writer.add_scalar(log_tag, average_return, step_cnt)
@@ -127,8 +140,6 @@ def trainer(
 
                 if record_ckpt:
                     ckpt_writer.save(agent, int(average_return), step_cnt)
-
-        episode_cnt += 1
 
     envs.close()
 
@@ -153,21 +164,17 @@ if __name__ == "__main__":
 
     # create async environments
     try:
-            num_envs = config[args.tag][args.agent]["num_envs"]
+        num_envs = config[args.tag][args.agent]["num_envs"]
     except:
         num_envs = 1
 
     if args.tag == "Atari":
-        envs = gym.vector.AsyncVectorEnv(
-            [lambda: make_atari_env(args.env)] * num_envs
-        )
+        envs = gym.vector.AsyncVectorEnv([lambda: make_atari_env(args.env)] * num_envs)
     elif args.tag == "ClassicControl":
         envs = gym.vector.make(args.env, num_envs=num_envs)
     elif args.tag == "Mujoco":
         if args.agent == "ppo":
-            envs = gym.vector.AsyncVectorEnv(
-                [lambda: ppo_wrapper(args.env)] * num_envs
-            )
+            envs = gym.vector.AsyncVectorEnv([lambda: ppo_wrapper(args.env)] * num_envs)
         else:
             envs = gym.vector.make(args.env, num_envs=num_envs)
     else:
@@ -236,10 +243,9 @@ if __name__ == "__main__":
                     "action_dim": agent_config_dict["action_space"].n,
                 },
                 "critic_net": PPOAtariCritic,
-                "critic_kwargs": {
-                    "num_channels": agent_config_dict["state_space"].shape[0],
-                },
-                **agent_config_dict
+                "critic_kwargs": {"num_channels": agent_config_dict["state_space"].shape[0]},
+                "max_step": args.max_step,
+                **agent_config_dict,
             }
 
         agent_config = ppo.PPOConfig(agent_config_dict)
