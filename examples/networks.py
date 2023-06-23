@@ -56,7 +56,7 @@ class LinearRainbowQNetwork(rainbow.RainbowQNetwork):
         self.value = rainbow.NoisyLinear(hidden_size, n_atoms)
 
 
-class PPOAtariActorCritic(nn.Module):
+class PPOAtariActor(nn.Module):
     def __init__(self, num_channels: int, action_dim: int) -> None:
         super().__init__()
         self.action_dim = action_dim
@@ -71,39 +71,59 @@ class PPOAtariActorCritic(nn.Module):
             nn.Flatten(),
             nn.Linear(7 * 7 * 64, 512),
             nn.ReLU(),
-            nn.Linear(512, action_dim + 1),
+            nn.Linear(512, action_dim),
+            nn.Softmax(dim=-1),
         )
-
-        self.activate = nn.Softmax(dim=-1)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         if len(state.shape) == 3:
             state = state.unsqueeze(0)
         x = self.net(state)
-        x, value = torch.split(x, [self.action_dim, 1], dim=-1)
-        x = self.activate(x)
-        return x, value
+        return x
 
     def get_dist(self, state: torch.Tensor) -> torch.distributions.Categorical:
-        x, value = self.forward(state)
+        x = self.forward(state)
         dist = torch.distributions.Categorical(x)
 
-        return dist, value
+        return dist
 
     def action(self, state: torch.Tensor) -> int:
-        dist, value = self.get_dist(state)
+        dist = self.get_dist(state)
         action = dist.sample()
         log_prob = dist.log_prob(action)
 
         action = action.detach().cpu().numpy()
         log_prob = log_prob.detach().cpu().numpy()
-        value = value.detach().cpu().numpy()
 
-        return action, log_prob, value
+        return action, log_prob
 
     def evaluate(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        dist, value = self.get_dist(state)
+        dist = self.get_dist(state)
         log_prob = dist.log_prob(action)
         entropy = dist.entropy()
 
-        return log_prob, entropy, value
+        return log_prob, entropy
+
+
+class PPOAtariCritic(nn.Module):
+    def __init__(self, num_channels: int) -> None:
+        super().__init__()
+
+        self.net = nn.Sequential(
+            nn.Conv2d(num_channels, 32, 8, 4),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, 2),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, 1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(7 * 7 * 64, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1),
+        )
+
+    def forward(self, state: torch.Tensor) -> torch.Tensor:
+        if len(state.shape) == 3:
+            state = state.unsqueeze(0)
+        x = self.net(state)
+        return x

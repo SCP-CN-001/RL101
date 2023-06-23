@@ -20,7 +20,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from networks import LinearQNetwork, LinearRainbowQNetwork
-from networks import PPOAtariActorCritic
+from networks import PPOAtariActor, PPOAtariCritic
 from ckpt_writer import CheckpointWriter
 
 from rllib.algorithms import dqn, rainbow, ddpg, sac, td3, ppo
@@ -237,8 +237,8 @@ if __name__ == "__main__":
                 agent_config_dict = {**agent_config_dict, **config[args.tag]["ppo_discrete"]}
         elif args.tag == "Atari":
             agent_config_dict = {
-                "network": PPOAtariActorCritic,
-                "network_kwargs": {
+                "actor_net": PPOAtariActor,
+                "actor_kwargs": {
                     "num_channels": agent_config_dict["state_space"].shape[0],
                     "action_dim": agent_config_dict["action_space"].n,
                 },
