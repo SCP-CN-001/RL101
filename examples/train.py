@@ -18,53 +18,34 @@ import numpy as np
 import gymnasium as gym
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from tensorboard.backend.event_processing import event_accumulator
 
 from networks import LinearQNetwork, LinearRainbowQNetwork
 from networks import PPOAtariActor, PPOAtariCritic
+from wrappers import atari_wrapper, mujoco_ppo_wrapper
 from ckpt_writer import CheckpointWriter
 
 from rllib.algorithms import dqn, rainbow, ddpg, sac, td3, ppo
 
 
-def make_atari_env(env_id: str) -> gym.Env:
-    env_config = {
-        "id": env_id + "NoFrameskip-v4",
-        "obs_type": "rgb",
-        "full_action_space": True,
-        "render_mode": "rgb_array",
-    }
-
-    env = gym.make(**env_config)
-    env = gym.wrappers.AtariPreprocessing(env, scale_obs=True)
-    env = gym.wrappers.FrameStack(env, num_stack=4)
-    return env
-
-
-def ppo_wrapper(env_id: str) -> gym.Env:
-    env = gym.make(env_id)
-    env = gym.wrappers.ClipAction(env)
-    env = gym.wrappers.NormalizeObservation(env)
-    env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
-    return env
-
-
-def trainer(
-    envs,  # VectorEnv
-    agent: callable,  # AgentBase
-    max_step: int,
-    debug: bool = False,
-    score_length: int = 100,
-    record_log: bool = True,
-    log_tag: str = "",
-    record_ckpt: bool = True,
-    record_interval: int = 1000,
-):
-    scores = deque([], maxlen=score_length)
-    score_cache = [0] * envs.num_envs
-    if debug:
-        losses = deque([], maxlen=score_length)
+def trainer(envs, agent, train_config: argparse.Namespace):
+    log_tag = f"{train_config.tag}/{train_config.env}"
+    max_step = train_config.max_step
+    debug = train_config.debug
+    score_length = train_config.score_length
+    record_log = train_config.record_log
+    record_interval = train_config.record_interval
+    record_ckpt = train_config.record_ckpt
+    continue_training = train_config.continue_training
+    log_path = train_config.log
+    ckpt_path = train_config.ckpt
     step_cnt = 0
     episode_cnt = 0
+
+    scores = deque([], maxlen=score_length)
+    score_cache = [0] * envs.num_envs
+    if train_config.debug:
+        losses = deque([], maxlen=score_length)
 
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
@@ -76,6 +57,24 @@ def trainer(
         ckpt_writer = CheckpointWriter(
             f"../models/{agent.name}/{log_tag}/{timestamp}", agent.name, 10
         )
+
+    if continue_training:
+        agent.load(ckpt_path)
+        step_cnt = int(ckpt_path.split("/")[-1].split("_")[1].split(".")[0]) + 1
+
+        if record_log:
+            previous_log = event_accumulator.EventAccumulator(log_path)
+            previous_log.Reload()
+            average_return = previous_log.Scalars(log_tag)
+            for i in average_return:
+                if i.step < step_cnt:
+                    log_writer.add_scalar(log_tag, i.value, i.step)
+
+            if debug:
+                average_loss = previous_log.Scalars(log_tag + "/loss")
+                for i in average_loss:
+                    if i.step < step_cnt:
+                        log_writer.add_scalar(log_tag + "/loss", i.value, i.step)
 
     while step_cnt < max_step:
         states, _ = envs.reset()
@@ -155,7 +154,9 @@ if __name__ == "__main__":
     parser.add_argument("--record-log", action="store_true", default=False)
     parser.add_argument("--record-interval", type=int, default=1000)
     parser.add_argument("--record-ckpt", action="store_true", default=False)
-    parser.add_argument("--continue-training", type=str, default=None)
+    parser.add_argument("--continue-training", action="store_true", default=False)
+    parser.add_argument("--log", type=str, default="")
+    parser.add_argument("--ckpt", type=str, default="")
     parser.add_argument("--device", type=str, default="cuda:0")
     args = parser.parse_args()
 
@@ -169,12 +170,12 @@ if __name__ == "__main__":
         num_envs = 1
 
     if args.tag == "Atari":
-        envs = gym.vector.AsyncVectorEnv([lambda: make_atari_env(args.env)] * num_envs)
+        envs = gym.vector.AsyncVectorEnv([lambda: atari_wrapper(args.env)] * num_envs)
     elif args.tag == "ClassicControl":
         envs = gym.vector.make(args.env, num_envs=num_envs)
     elif args.tag == "Mujoco":
         if args.agent == "ppo":
-            envs = gym.vector.AsyncVectorEnv([lambda: ppo_wrapper(args.env)] * num_envs)
+            envs = gym.vector.AsyncVectorEnv([lambda: mujoco_ppo_wrapper(args.env)] * num_envs)
         else:
             envs = gym.vector.make(args.env, num_envs=num_envs)
     else:
@@ -251,14 +252,4 @@ if __name__ == "__main__":
         agent_config = ppo.PPOConfig(agent_config_dict)
         agent = ppo.PPO(agent_config, device=device)
 
-    trainer(
-        envs,
-        agent,
-        max_step=args.max_step,
-        debug=args.debug,
-        score_length=args.score_length,
-        record_log=args.record_log,
-        log_tag=f"{args.tag}/{args.env}",
-        record_ckpt=args.record_ckpt,
-        record_interval=args.record_interval,
-    )
+    trainer(envs, agent, args)

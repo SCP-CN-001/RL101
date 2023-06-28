@@ -11,6 +11,7 @@ sys.path.append(".")
 sys.path.append("..")
 sys.path.append("../rllib")
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -56,6 +57,12 @@ class LinearRainbowQNetwork(rainbow.RainbowQNetwork):
         self.value = rainbow.NoisyLinear(hidden_size, n_atoms)
 
 
+def orthogonal_init(layer, gain: float = np.sqrt(2), constant: float = 0.0):
+    nn.init.orthogonal_(layer.weight.data, gain)
+    nn.init.constant_(layer.bias.data, constant)
+    return layer
+
+
 class PPOAtariActor(nn.Module):
     def __init__(self, num_channels: int, action_dim: int) -> None:
         super().__init__()
@@ -71,7 +78,7 @@ class PPOAtariActor(nn.Module):
             nn.Flatten(),
             nn.Linear(7 * 7 * 64, 512),
             nn.ReLU(),
-            nn.Linear(512, action_dim),
+            orthogonal_init(nn.Linear(512, action_dim), 0.01),
             nn.Softmax(dim=-1),
         )
 
@@ -119,7 +126,7 @@ class PPOAtariCritic(nn.Module):
             nn.Flatten(),
             nn.Linear(7 * 7 * 64, 512),
             nn.ReLU(),
-            nn.Linear(512, 1),
+            orthogonal_init(nn.Linear(512, 1), 1),
         )
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
