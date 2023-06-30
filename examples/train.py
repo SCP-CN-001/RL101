@@ -60,7 +60,8 @@ def trainer(envs, agent, train_config: argparse.Namespace):
 
     if continue_training:
         agent.load(ckpt_path)
-        step_cnt = int(ckpt_path.split("/")[-1].split("_")[1].split(".")[0]) + 1
+        last_step = int(ckpt_path.split("/")[-1].split("_")[1].split(".")[0])
+        step_cnt = last_step + 1
 
         if record_log:
             previous_log = event_accumulator.EventAccumulator(log_path)
@@ -117,6 +118,10 @@ def trainer(envs, agent, train_config: argparse.Namespace):
             step_cnt += 1
             if debug and loss is not None:
                 losses.append(loss.cpu().detach().numpy())
+
+            if args.continue_training and len(scores) < score_length:
+                step_cnt -= 1
+                continue
 
             if len(scores) > 0 and step_cnt % record_interval == 0:
                 average_return = np.mean(scores)
