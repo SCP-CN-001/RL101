@@ -75,7 +75,9 @@ def trainer(envs, agent, train_config: argparse.Namespace):
                 average_loss = previous_log.Scalars(log_tag + "/loss")
                 for i in average_loss:
                     if i.step < step_cnt:
-                        log_writer.add_scalar(log_tag + "/loss", i.value, i.step, walltime=i.wall_time)
+                        log_writer.add_scalar(
+                            log_tag + "/loss", i.value, i.step, walltime=i.wall_time
+                        )
 
     while step_cnt < max_step:
         states, _ = envs.reset()
